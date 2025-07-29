@@ -1,3 +1,7 @@
+import LSpec.Prelude
+import LSpec.Parser
 import LSpec.LSpec
 import LSpec.Instances
-import LSpec.SlimCheck
+import LSpec.SlimCheck.Checkable
+import LSpec.Core.Spec
+import LSpec.Discover.Macro

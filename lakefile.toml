@@ -1,6 +1,33 @@
 name = "LSpec"
-version = "2.0.0"
-defaultTargets = ["LSpec"]
+version = "2.1.0"
+defaultTargets = [
+  "LSpec",
+  "lspec-discover",
+  "Test.Spec",
+]
+testDriver = "Test.Spec"
+
+[[lean_lib]]
+name = "GetOpt"
+
+[[lean_lib]]
+name = "Polyfill"
 
 [[lean_lib]]
 name = "LSpec"
+
+[[lean_exe]]
+name = "lspec-discover"
+root = "LSpec.Discover.Main"
+
+[[lean_exe]]
+name = "Test.Spec"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[require]]
+name = "Cli"
+git = "https://github.com/leoslf/lean4-cli"
+rev = "286f67902bbb5b8cbb1550c471feec44121150de"
