@@ -7,3 +7,9 @@ instance : Monoid (List α) where
   mul_assoc := List.append_assoc
   one_mul := List.nil_append
   mul_one := List.append_nil
+
+partial def List.groupBy (predicate : a -> a -> Bool) : List a -> List (List a)
+| [] => []
+| x :: xs =>
+  let (group, rest) := xs.partition (predicate x)
+  (x :: group) :: List.groupBy predicate rest

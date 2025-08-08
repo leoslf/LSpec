@@ -1,8 +1,9 @@
-import LSpec.Prelude
-
 import GetOpt.Declarative
 
+import LSpec.Prelude
+
 import LSpec.Core.Seed
+import LSpec.Core.Path
 import LSpec.Core.Annotations
 
 import LSpec.Core.DiffContext
@@ -12,6 +13,7 @@ import LSpec.Core.Formatters
 namespace LSpec.Core
 
 open GetOpt
+open LSpec.Core (Seed)
 open LSpec.Core.Formatters
 
 namespace Config
@@ -39,57 +41,72 @@ end Config
 open Config
 
 structure SlimCheckConfig where
-  seed : Option Seed
+  seed? : Option Seed
   maxSuccess : Option Nat
   maxDiscardRatio : Option Nat
   maxSize : Option Nat
   maxShrinks : Option Nat
 deriving Repr, Inhabited, DecidableEq
 
+#check Format
+#check Format.Config
+
 -- #check Path
 
+inductive FailOn where
+| empty : FailOn
+| focused : FailOn
+| pending : FailOn
+| emptyDescription : FailOn
+deriving Repr, BEq, Hashable
+
+#synth Repr (Path -> Bool)
+#synth Repr (Option (Path -> Bool))
+
 structure Config where
-  ignoreConfigFile : Bool
-  dryRun : Bool
-  focusedOnly : Bool
-  failOnEmpty : Bool
-  failOnFocused : Bool
-  failOnPending : Bool
-  failOnEmptyDescription : Bool
-  printSlowItems : Option Nat
-  printCpuTime : Bool
-  failFast : Bool
-  randomize : Bool
-  seed : Option Seed
-  failureReport : Option System.FilePath
-  rerun : Bool
-  rerunAllOnSuccess : Bool
+  mk ::
+  ignoreConfigFile : Bool := false
+  dryRun : Bool := false
+  focusedOnly : Bool := false
+  failOn : Std.HashSet FailOn := {}
+  printSlowItems : Option Nat := .none
+  printCpuTime : Bool := false
+  failFast : Bool := false
+  randomize : Bool := false
+  seed? : Option Seed := .none
+  failureReport : Option System.FilePath := .none
+  rerun : Bool := false
+  rerunAllOnSuccess : Bool := false
   /--
     A predicate that is used to filter the spec before it is run.
     Only examples that satisfy the predicate are run.
   -/
-  filter : Option (Path -> Bool)
-  skip : Option (Path -> Bool)
+  filter? : Option (Path -> Bool) := .none
+  skip? : Option (Path -> Bool) := .none
 
-  slimCheck : SlimCheckConfig
-  smallCheckDepth : Option Nat
-  colorMode : ColorMode
-  unicodeMode : UnicodeMode
-  diff : Bool
-  diffContext : Option DiffContext
-  externalDiff : Option (Option Int -> String -> String -> IO Unit)
-  prettyPrint : Bool
-  prettyPrintFunction : Bool -> String -> String -> String × String
-  formatException : IO.Error -> String
-  times : Bool
-  expertMode : Bool
+  slimCheck : SlimCheckConfig := default
+  smallCheckDepth : Option Nat := .none
+  colorMode : ColorMode := default
+  unicodeMode : UnicodeMode := default
+  diff : Bool := false
+  diffContext? : Option DiffContext := .none
+  externalDiff? : Option (Option Int -> String -> String -> IO Unit) := .none
+  prettyPrint : Bool := false
+  prettyPrintFunction : Bool -> String -> String -> String × String := pretty2
+  formatException : IO.Error -> String := IO.Error.formatExceptionWith toString
+  times : Bool := false
+  expertMode : Bool := false
   availableFormatters : List Formatter
-  format : Option (Format.Config -> IO Format)
-  formatter : Option V1.Formatter
-  htmlOutput : Bool
-  concurrentJobs : Option Nat
-  annotations : Annotations
-deriving Inhabited
+  format? : Option (Format.Config -> IO Format) := .none
+  -- FIXME: universe-level problems
+  -- formatter? : Option V1.Formatter := .none
+  htmlOutput : Bool := false
+  concurrentJobs : Option Nat := .none
+  annotations : Annotations := {}
+deriving Inhabited, Repr
+
+#check Config
+-- #print Config
 
 -- #check Annotations
 -- #check Format
@@ -98,64 +115,34 @@ deriving Inhabited
 
 def Config.mkDefault (formatters : List Formatter) : Config :=
   {
-    ignoreConfigFile := false,
-    dryRun := false,
-    focusedOnly := false,
-    failOnEmpty := false,
-    failOnFocused := false,
-    failOnPending := false,
-    failOnEmptyDescription := false,
-    printSlowItems := .none,
-    printCpuTime := false,
-    failFast := false,
-    randomize := false,
-    seed := .none,
-    failureReport := .none,
-    rerun := false,
-    rerunAllOnSuccess := false,
-    filter := .none,
-    skip := .none,
-
-    slimCheck := default,
-    smallCheckDepth := .none,
-    colorMode := default,
-    unicodeMode := default,
-    diff := true,
-    diffContext := .some DiffContext.default
-    externalDiff := .none,
-    prettyPrint := true,
-    prettyPrintFunction := Pretty.pretty2,
-    formatException := IO.Error.formatExceptionWith toString,
-    times := false,
-    expertMode := false,
-    availableFormatters := formatters,
-    format := .none,
-    formatter := .none,
-    htmlOutput := false,
-    concurrentJobs := .none,
-    annotations := {},
+    availableFormatters := formatters
   }
 
 instance : Inhabited Config where
-  default := Config.mkDefault $ []
-    -- [
-    --   ("checks", V2.checks),
-    --   ("specdoc", V2.specdoc),
-    --   ("progress", V2.progress),
-    --   ("failed-examples", V2.failed_examples),
-    --   ("silent", V2.silent),
-    -- ]
-    --   |>.map (Functor.map V2.formatterToFormat)
+  default := Config.mkDefault $
+    [
+      ("checks", V2.checks),
+      ("specdoc", V2.specdoc),
+      ("progress", V2.progress),
+      ("failed-examples", V2.failed_examples),
+      ("silent", V2.silent),
+    ] |>.map $ second V2.Formatter.toFormat
+
+-- set_option diagnostics true
+
+def Config.getFormatter (config : Config) (formatter? : Option V1.Formatter := .none) : Option (Format.Config -> IO Format) :=
+  config.format? <|> formatter?.map (·.toFormat)
 
 def Config.getSeed (config : Config) : Option Seed :=
-  config.seed <|> config.slimCheck.seed
+  config.seed? <|> config.slimCheck.seed?
 
 def Config.ensureSeed (config : Config) : IO (Seed × Config) := do
-  let seed <-
-    match config.seed with
-    | .none => Seed.new
-    | .some seed => pure seed
-  return (seed, { config with seed := .some seed })
+  let seed <- ensure config.seed?
+  return (seed, { config with seed? := .some seed })
+ where
+  ensure : Option Seed -> IO Seed
+  | .none => liftM Seed.new
+  | .some seed => pure seed
 
 abbrev Filter := Option (Path -> Bool)
 
@@ -164,31 +151,31 @@ def Filter.or : Filter -> Filter -> Filter
 | f, g => f <|> g
 
 def addMatch (pattern : String) (config : Config) : Config :=
-  { config with filter := Option.some (Path.filterPredicate pattern) |>.or config.filter }
+  { config with filter? := Option.some (Path.filterPredicate pattern) |>.or config.filter? }
 
 def addSkip (pattern : String) (config : Config) : Config :=
-  { config with skip := Option.some (Path.filterPredicate pattern) |>.or config.skip }
+  { config with skip? := Option.some (Path.filterPredicate pattern) |>.or config.skip? }
 
-def argument {Config} (name : String) (parser : String -> Option a) (setter : a -> Config -> Config) : Declarative.Types.Setter Config :=
-  .Arg name $ λ input config => flip setter config <$> parser input
+-- def argument {Config} (name : String) (parser : String -> Option a) (setter : a -> Config -> Config) : Declarative.Types.Setter Config :=
+--   .Arg name $ λ input config => flip setter config <$> parser input
 
-def commandLineOnlyOptions : List (Declarative.Types.Option' Config) :=
-  [
-    .mk "ignore-dot-lspec" .none (.NoArg setIgnoreConfigFile) "do not read options from ~/.lspec and .lspec" true,
-    .mk "match" (.some 'm') (argument "PATTERN" pure addMatch) "only run examples that match given PATTERN" true,
-    .mk "skip" .none (argument "PATTERN" pure addSkip) "skip examples that match given PATTERN" true,
-  ]
- where
-  setIgnoreConfigFile (config : Config) := { config with ignoreConfigFile := true }
+-- def commandLineOnlyOptions : List (Declarative.Types.Option' Config) :=
+--   [
+--     .mk "ignore-dot-lspec" .none (.NoArg setIgnoreConfigFile) "do not read options from ~/.lspec and .lspec" true,
+--     .mk "match" (.some 'm') (argument "PATTERN" pure addMatch) "only run examples that match given PATTERN" true,
+--     .mk "skip" .none (argument "PATTERN" pure addSkip) "skip examples that match given PATTERN" true,
+--   ]
+--  where
+--   setIgnoreConfigFile (config : Config) := { config with ignoreConfigFile := true }
 
 structure ExtensionOptions where
   mk ::
   unExtensionOptions : List (String × List (Declarative.Types.Option' Config))
 deriving TypeName
 
-def getConfigAnnotation [TypeName a] : Config -> Option a :=
+def getConfigAnnotation {a : Type u} [TypeName a] : Config -> Option a :=
   Annotations.getValue ∘ Config.annotations
 
-def getExtensionOptions : Config -> List (String × List (Declarative.Types.Option' Config)) :=
-  (·.elim [] ExtensionOptions.unExtensionOptions) ∘ getConfigAnnotation
+def getExtensionOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
+  getConfigAnnotation config |>.elim [] ExtensionOptions.unExtensionOptions
 

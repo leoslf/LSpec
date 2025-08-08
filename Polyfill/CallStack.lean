@@ -21,9 +21,9 @@ end CallStack
 
 abbrev CallStack := List (String × CallStack.Location)
 
-def callStack (_ : Unit) : CallStack :=
-  let backtrace := unsafe unsafeBaseIO $ IO.backtrace ()
-  dbgTrace backtrace (Function.const Unit [])
+def callStack (_ : Unit) : CallStack := []
+  -- let backtrace := unsafe unsafeBaseIO $ IO.backtrace ()
+  -- dbgTrace backtrace (Function.const Unit [])
 
 def callSite (_ : Unit) : Option (String × CallStack.Location) :=
   callStack () |>.getLast?

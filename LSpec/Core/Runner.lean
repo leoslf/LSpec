@@ -1,3 +1,4 @@
+import LSpec.Core.Args
 import LSpec.Core.Config
 import LSpec.Core.Tree
 import LSpec.Core.FailureReport
@@ -5,6 +6,7 @@ import LSpec.Core.Example
 import LSpec.Core.Runner.Eval
 import LSpec.Core.Runner.JobQueue
 import LSpec.Core.Runner.Result
+import LSpec.Core.Runner.PrintSlowSpecItems
 import LSpec.Core.Spec.Monad
 
 namespace LSpec.Core.Runner
@@ -41,19 +43,19 @@ def failPending (item : Item a) : Item a :=
         | _ => status
 
 def failPendingItems (config : Config) : SpecForest a -> SpecForest a :=
-  if config.failOnPending then
+  if config.failOn.contains .pending then
     SpecForest.map failPending
   else
     id
 
 def failItemsWithEmptyDescription (config : Config) : SpecForest a -> SpecForest a :=
-  if config.failOnEmptyDescription then
+  if config.failOn.contains .emptyDescription then
     failIf (String.isEmpty ∘ Item.requirement) $ "item has no description; failing due to --fail-on=empty-description"
   else
     id
 
 def failFocusedItems (config : Config) : SpecForest a -> SpecForest a :=
-  if config.failOnFocused then
+  if config.failOn.contains .focused then
     failIf Item.isFocused $ "item is focused; failing due to --fail-on=focused"
   else
     id
@@ -63,26 +65,26 @@ def addDefaultDescriptions : SpecForest a -> SpecForest a :=
  where
   addDefaultDescription (item : Item a) : Item a :=
     if item.requirement.isEmpty then
-      { item with requirement := item.location |>.elim "(unspecified behavior)" formatDefaultDescription }
+      { item with requirement := item.location? |>.elim "(unspecified behavior)" formatDefaultDescription }
     else
       item
 
-def toEvalItemForest (params : Params) : SpecForest Unit -> List Eval.Tree :=
+def toEvalItemForest (params : Params) : SpecForest Unit -> List Eval.EvalTree :=
   Forest.bimap id toEvalItem ∘ Forest.filter Item.isFocused
  where
   withUnit (action : ActionWith Unit) : IO Unit :=
     action ()
 
-  toEvalItem : Item Unit -> Eval.Item
-  | { requirement, location, parallelizable, example_, .. } =>
+  toEvalItem : Item Unit -> Eval.EvalItem
+  | { requirement, location?, parallelizable, example_, .. } =>
     {
       description := requirement,
-      location := location,
+      location? := location?,
       concurrency := if parallelizable == .some true then .Concurrent else .Sequential,
       action := λprogress => Clock.measure $ example_ params withUnit progress,
     }
 
-def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.Forest :=
+def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.EvalForest :=
   failItemsWithEmptyDescription config
   >>>> addDefaultDescriptions
   >>>> failFocusedItems config
@@ -93,7 +95,8 @@ def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.F
   -- >>>> applyDryRun config
   -- >>>> applyFilterPredicates config
   >>>> randomize
-  >>>> Forest.prune
+  -- FIXME:
+  -- >>>> Forest.prune
  where
   params : Params := Params.mk
 
@@ -113,7 +116,7 @@ inductive UseColor where
 | Enabled (mode : ProgressReporting) : UseColor
 deriving Repr, BEq
 
-def shouldUseColor : UseColor -> Bool
+def UseColor.shouldUseColor : UseColor -> Bool
 | .Disabled => false
 | .Enabled _ => true
 
@@ -154,32 +157,8 @@ def withHiddenCursor (progress : ProgressReporting) (stream : IO.FS.Stream) : IO
   | .Disabled => id
   | .Enabled => IO.bracket_ stream.hideCursor stream.showCursor
 
-def getDefaultConcurrentJobs : IO Nat := pure 1 -- TODO
+def getDefaultConcurrentJobs : IO Nat :=
+  IO.nproc
 
-def doNotLeakCommandLineArgumentsToExamples : IO a -> IO a :=
-  IO.withArgs []
-
-def runSpecForest_ (oldFailureReport? : Option FailureReport) (spec : SpecForest Unit) (config : Config) : IO SpecResult := do
-  let (seed, config) <- FailureReport.apply oldFailureReport? config |>.ensureSeed
-  let stdout <- IO.getStdout
-  let colorMode <- colorOutputSupported config.colorMode $ stdout.supportsANSI
-  let outputUnicode <- unicodeOutputSupported config.unicodeMode stdout
-  let filteredSpec := specToEvalForest seed config spec
-  let filteredCount : Nat := Forest.count filteredSpec
-  let specCount : Nat := Forest.count spec
-  if config.failOnEmpty && filteredCount == 0 then
-    if specCount != 0 then
-      die "all spec items have been filtered; failing due to --fail-on=empty"
-  -- TODO
-  let concurrentJobs <- config.concurrentJobs.elim getDefaultConcurrentJobs pure
-  let results <- do
-    sorry
-  return results
-
-def runSpecForest (spec : SpecForest Unit) (config : Config) : IO SpecResult := do
-  let oldFailureReport <- FailureReport.readOnRerun config
-  runSpecForest_ oldFailureReport spec config
-
-def evalSpec (config : Config) (spec : SpecWith a) : IO (Config × SpecForest a) := do
-  match (<- spec.run) with
-  | (f, forest) => return (f config, forest)
+def doNotLeakCommandLineArgumentsToExamples : ArgsT m a -> ArgsT m a :=
+  withArgs []

@@ -2,19 +2,24 @@ import Std.Data.HashMap
 
 namespace LSpec.Core
 
+universe u
+
 abbrev Annotations := Std.HashMap Lean.Name Dynamic
 
-namespace Annotations
-
-def setValue [TypeName α] (value : α) (annotations : Annotations) : Annotations :=
+def Annotations.setValue {α : Type u} [TypeName α] (value : α) (annotations : Annotations) : Annotations :=
   let dynamic := Dynamic.mk value
   let type : Lean.Name := dynamic.typeName
   annotations.insert type dynamic
 
-def getValue [TypeName α] (annotations : Annotations) : Option α :=
+def Annotations.getValue {α : Type u} [TypeName α] (annotations : Annotations) : Option α := do
   let type : Lean.Name := TypeName.typeName α
-  do
-    let dynamic <- annotations.get? type
-    dynamic.get? α
+  match annotations.get? type with
+  | Option.none => Option.none
+  | Option.some (dynamic : Dynamic) => Dynamic.get? α dynamic
 
-end Annotations
+instance : Repr Annotations where
+  reprPrec annotations prec :=
+    let annotations' := annotations.toList
+      -- TODO: value
+      |>.map λ(type, _) => type
+    reprPrec annotations' prec

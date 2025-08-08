@@ -5,3 +5,4 @@ import LSpec.Instances
 import LSpec.SlimCheck.Checkable
 import LSpec.Core.Spec
 import LSpec.Discover.Macro
+import LSpec.Core.Runner.Cmd

@@ -1,3 +1,5 @@
+import LSpec.Prelude
+
 namespace LSpec.Core
 
 abbrev Seed := Int

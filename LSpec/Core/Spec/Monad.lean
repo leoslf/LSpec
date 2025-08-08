@@ -27,13 +27,17 @@ abbrev SpecM a r :=
 #synth ∀a, Functor (SpecM a)
 #synth ∀a, Applicative (SpecM a)
 #synth ∀a, Monad (SpecM a)
-#synth ∀a, MonadIO (SpecM a)
-
-def SpecM.run : SpecM a Unit -> IO (Function.End Config × SpecForest a) :=
-  flip ReaderT.run (Env.mk []) ∘ WriterT.exec
+-- #synth ∀a, MonadIO (SpecM a)
 
 abbrev SpecWith a := SpecM a Unit
 abbrev Spec := SpecWith Unit
+
+def SpecWith.run : SpecWith a -> IO (Function.End Config × SpecForest a) :=
+  flip ReaderT.run (Env.mk []) ∘ WriterT.exec
+
+def SpecWith.evaluate (config : Config) (spec : SpecWith a) : IO (Config × SpecForest a) := do
+  let (f, forest) <- spec.run
+  return (f config, forest)
 
 def withEnv {r : Type} (f : Env -> Env) : SpecM a r -> SpecM a r :=
   WriterT.map (withReader f)
@@ -47,8 +51,9 @@ def fromSpecForest : Function.End Config × SpecForest a -> SpecWith a :=
 def fromSpecList (forest : SpecForest a) : SpecWith a :=
   fromSpecForest (One.one, forest)
 
+-- FIXME: remove this
 def runIO : IO r -> SpecM a r :=
-  MonadIO.liftIO
+  liftM
 
 def mapSpecForest (f : SpecForest a -> List (SpecTree b)) : SpecM a r -> SpecM b r :=
   WriterT.map (Functor.map $ Functor.map $ second f)

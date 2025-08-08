@@ -14,6 +14,9 @@ name = "GetOpt"
 name = "Polyfill"
 
 [[lean_lib]]
+name = "Console"
+
+[[lean_lib]]
 name = "LSpec"
 
 [[lean_exe]]
@@ -26,8 +29,24 @@ name = "Test.Spec"
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+rev = "059a5bcfe2f022fdcc04b1f294252566da9c21a2"
 
 [[require]]
 name = "Cli"
 git = "https://github.com/leoslf/lean4-cli"
 rev = "286f67902bbb5b8cbb1550c471feec44121150de"
+
+[[require]]
+name = "Printf"
+git = "https://github.com/leoslf/printf.lean"
+rev = "d1c9911c40a6d480570a739712dad5adb2de0d94"
+
+[[require]]
+name = "Free"
+git = "https://github.com/leoslf/free.lean"
+rev = "39e99349f957ea406000fbf0105309b4444b8a8a"
+
+[[require]]
+name = "Concurrency"
+git = "https://github.com/leoslf/concurrency.lean"
+rev = "adcc5e2134389ed272c88c4271423d0dda6c6568"

@@ -1,3 +1,4 @@
+import LSpec.Core.Path
 import LSpec.Core.Format
 
 namespace LSpec.Core.Runner
@@ -32,6 +33,23 @@ structure SpecResult where
   items : List SpecResult.Item
   success : Bool
 deriving Repr, DecidableEq, Inhabited
+
+def toSpecResultItem : Path × Format.Item -> SpecResult.Item
+| (path, item) =>
+  {
+    path
+    status :=
+      match item.result with
+      | .Success => .Success
+      | .Pending _ _ => .Pending
+      | .Failure _ _ => .Failure
+  }
+
+def toSpecResult (results : List (Path × Format.Item)) : SpecResult :=
+  { items, success }
+ where
+  items := results.map toSpecResultItem
+  success := items.all (not ∘ SpecResult.Item.isFailure)
 
 structure Summary where
   examples : Nat

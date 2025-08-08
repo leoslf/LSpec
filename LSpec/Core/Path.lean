@@ -4,6 +4,10 @@ namespace LSpec.Core
 
 /-- At Path describes the location of a spec item within a spec tree. -/
 abbrev Path := List String × String
+deriving instance TypeName for Path
+
+#synth TypeName Path
+#synth Repr Path
 
 namespace Path
 

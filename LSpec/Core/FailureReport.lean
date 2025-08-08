@@ -52,8 +52,8 @@ def FailureReport.readOnRerun (config : Config) : IO (Option FailureReport) :=
 def FailureReport.apply (report? : Option FailureReport) (config : Config) : Config :=
   {
     config with
-    filter := matchFilter.or rerunFilter,
-    seed := config.getSeed <|> ((·.seed) <$> report?),
+    filter? := matchFilter.or rerunFilter,
+    seed? := config.getSeed <|> ((·.seed) <$> report?),
     slimCheck := {
       config.slimCheck with
       maxSuccess := config.slimCheck.maxSuccess <|> ((·.maxSuccess) <$> report?),
@@ -62,7 +62,7 @@ def FailureReport.apply (report? : Option FailureReport) (config : Config) : Con
     },
   }
  where
-  matchFilter := config.filter
+  matchFilter := config.filter?
   rerunFilter :=
     match (·.paths) <$> report? with
     | .some []

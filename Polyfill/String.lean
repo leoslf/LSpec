@@ -1,3 +1,5 @@
+import Polyfill.List
+
 def String.words : String -> List String :=
   String.splitOn (sep := " ")
 
@@ -43,3 +45,41 @@ def String.unescapeArgs (args : String) (ifs : String := defaultIFS) : List Stri
   args.unescape (ifs := ifs) |>.filter (!·.isEmpty)
 
 export String (words unescape unescapeArgs)
+
+def String.groupBy (predicate : Char -> Char -> Bool) (self : String) : List String :=
+  self.toList |>.groupBy predicate |>.map List.asString
+
+def String.filter (predicate : Char -> Bool) (self : String) : String :=
+  self.toList |>.filter predicate |>.asString
+
+/--
+isSpace includes non-breaking space
+The magic 0x377 isn't really that magical. As of 2014, all the codepoints
+at or below 0x377 have been assigned, so we shouldn't have to worry about
+any new spaces appearing below there. It would probably be best to
+use branchless ||, but currently the eqLit transformation will undo that,
+so we'll do it like this until there's a way around that.
+-/
+def Char.isSpace (c : Char) : Bool :=
+  let uc := c.toNat
+  if uc <= 0x377 then
+    uc == 32 || uc - 0x9 <= 4 || uc == 0xa0
+  else
+    -- FIXME: above 0x377
+    false
+
+def String.span (predicate : Char -> Bool) (s : String) : String × String :=
+  s.toList.span predicate |>.map List.asString List.asString
+
+partial def String.lines : String -> List String
+| "" => []
+| s =>
+  match s.span (· != '\n') with
+  | (l, s') => l :: (s'.drop 1 |>.lines)
+
+export String (lines)
+
+def List.unlines : List String -> String :=
+  "\n".intercalate
+
+export List (unlines)
