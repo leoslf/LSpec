@@ -2,6 +2,7 @@ import LSpec.Core.Args
 import LSpec.Core.Tree
 import LSpec.Core.Clock
 import LSpec.Core.Config
+import LSpec.Core.Expectations
 import LSpec.Core.FailureReport
 import LSpec.Core.Runner
 import LSpec.Core.Runner.Cmd
@@ -26,7 +27,8 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
       die "all spec items have been filtered; failing due to --fail-on=empty"
   -- TODO
   let concurrentJobs <- config.concurrentJobs.elim getDefaultConcurrentJobs pure
-  let results : SpecResult <- Functor.map toSpecResult ∘ withHiddenCursor colorMode.progressReporting (<- IO.getStdout) $ do
+  let stdout <- IO.getStdout
+  let results : SpecResult <- Functor.map toSpecResult ∘ withHiddenCursor colorMode.progressReporting stdout $ do
     let formatConfig : Format.Config := {
       useColor := colorMode.shouldUseColor
       reportProgress := colorMode.progressReporting == .Enabled
@@ -65,7 +67,7 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
     IO.eprintln! s!"filteredSpec: {filteredSpec}"
     Eval.runFormatter evalConfig filteredSpec
 
-  pure results
+  return results
 
 def SpecForest.run (spec : SpecForest Unit) (config : Config) : ArgsT IO SpecResult := do
   let oldFailureReport <- FailureReport.readOnRerun config
@@ -89,9 +91,11 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
     let oldFailureReport? <- FailureReport.readOnRerun config
 
     let normalMode := do
-      IO.eprintln "normalMode"
-      ArgsT.withArgs [] do
+      IO.eprintln! "normalMode"
+      let results <- ArgsT.withArgs [] do
         SpecForest.runWithOldFailureReport oldFailureReport? forest config
+      IO.eprintln! "after SpecForest.runWithOldFailureReport"
+      return results
 
     let rerunMode := do
       let result <- normalMode
@@ -107,15 +111,18 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
       normalMode
 
 def Summary.evaluate (summary : Summary) : ArgsT IO Unit := do
+  IO.eprintln! summary
   unless summary.isSuccess do
     die "summary is not success"
 
 def SpecResult.evaluate (result : SpecResult) : ArgsT IO Unit := do
+  IO.eprintln! result
   unless result.success do
     die "result is not success"
 
 def lspecWith (config : Config) (spec : Spec) : ArgsT IO Unit := do
-  lspecWithSpecResult config spec >>= SpecResult.evaluate
+  SpecResult.evaluate =<< lspecWithSpecResult config spec
+  IO.Process.exit 0
 
 def lspec (spec : Spec) : ArgsT IO Unit :=
   lspecWith default spec
@@ -130,3 +137,22 @@ def context : String -> SpecWith a -> SpecWith a := describe
 
 def it [Example a] (label : String) (action : a) : SpecWith (Example.Arg a) := do
   fromSpecList [specItem label action]
+
+def setParallelizable (value : Bool) (item : SpecTree.Item a) : SpecTree.Item a :=
+  { item with parallelizable? := item.parallelizable? <|> .some value }
+
+def parallel : SpecWith a -> SpecWith a :=
+  mapSpecItem (setParallelizable true)
+
+def sequential : SpecWith a -> SpecWith a :=
+  mapSpecItem (setParallelizable false)
+
+-- FIXME:
+-- def pending : ExpectationM Unit := do
+--   throw $ .Pending (location ()) .none
+--
+-- def pending_ : ExpectationM Unit := do
+--   throw $ .Pending .none .none
+
+def getSpecDescriptionPath : SpecM a (List String) := do
+  List.reverse <$> reads Env.specDescriptionPath

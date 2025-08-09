@@ -1,5 +1,5 @@
+import LSpec.Prelude
 import LSpec.Core.Path
-import LSpec.Core.Location
 import LSpec.Core.Format
 
 namespace LSpec.Core.Runner

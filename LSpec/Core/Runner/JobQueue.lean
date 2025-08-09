@@ -1,5 +1,6 @@
-import LSpec.Prelude
 import Concurrency
+
+import LSpec.Prelude
 
 namespace LSpec.Core
 
@@ -30,20 +31,20 @@ structure JobQueue where
   semaphore : Semaphore
   cancelQueue : CancelQueue
 
-def JobQueue.new (concurrency : Nat := 0) : IO JobQueue :=
+def JobQueue.new [Monad m] [MonadLift IO m] (concurrency : Nat := 0) : m JobQueue :=
   JobQueue.mk <$> Semaphore.new concurrency <*> CancelQueue.new []
 
-def JobQueue.cancelAll (self : JobQueue) : IO Unit :=
+def JobQueue.cancelAll [Monad m] [MonadLift IO m] (self : JobQueue) : m Unit :=
   self.cancelQueue.get >>= cancelMany
  where
-  notifyCancel {a : Type _} (task : Task a) : IO Unit := do
+  notifyCancel {a : Type _} (task : Task a) : m Unit := do
     IO.cancel task
 
-  cancelMany {a : Type _} (jobs : List (Task a)) : IO Unit := do
+  cancelMany {a : Type _} (jobs : List (Task a)) : m Unit := do
     jobs.forM notifyCancel
     jobs.forM λjob => IO.wait job *> pure ()
 
-def withJobQueue (concurrency : Nat) : (JobQueue -> IO a) -> IO a :=
+def withJobQueue [Monad m] [MonadFinally m] [MonadLift IO m] (concurrency : Nat) : (JobQueue -> m a) -> m a :=
   IO.bracket (JobQueue.new concurrency) JobQueue.cancelAll
 
 
@@ -58,30 +59,40 @@ set_option linter.dupNamespace false
 inductive Partial progress (a : Type) where
 | Partial : progress -> Partial progress a
 | Done : Partial progress a
+deriving Inhabited
 
 def Functor.void [Functor f] : f a -> f Unit :=
   Functor.map $ Function.const _ ()
 
-partial def runConcurrently [MonadLift IO m] (semaphore : Semaphore) (cancelQueue : CancelQueue) (action : Job IO progress a) : IO (Job m progress (Except IO.Error a)) := do
+#synth ∀{a : Type}, Nonempty (Except IO.Error a)
+#synth ∀{a : Type}, Nonempty (Except IO.Error a)
+
+partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (semaphore : Semaphore) (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
   let result : Concurrency.MVar (Partial progress a) <- Concurrency.MVar.empty
-  let worker : IO a := semaphore.bracket $ do
-    if (<- IO.checkCanceled) then
-      throw $ IO.userError "cancelled"
+  let worker : IO a := semaphore.bracket do
     try
-      let partialResult : progress -> IO Unit := result.replace ∘ Partial.Partial
+      if (<- IO.checkCanceled) then
+        throw $ IO.userError "canceled"
+
+      let partialResult (p : progress) : BaseIO Unit := do
+        result.put $ Partial.Partial p
       action partialResult
     finally
-      result.replace Partial.Done
+      IO.eprintln! s!"worker: done"
+      result.put Partial.Done
+
   let pushOnCancelQueue (task : Task (Except IO.Error a)) : IO Unit := do
     cancelQueue.modify (·.concat $ task.map λ_ => ())
-  let job <- IO.bracket (IO.asTask worker) pushOnCancelQueue pure
+
+  let job <- IO.bracket (EIO.asTask worker) pushOnCancelQueue pure
   let rec waitForResult (notifyPartial : progress -> m Unit) : m (Except IO.Error a) := do
     match <- result.take with
     | .Partial progress => notifyPartial progress *> waitForResult notifyPartial
     | .Done => IO.wait job
   return waitForResult
 
-def runSequentially [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job IO progress a) : IO (Job m progress (Except IO.Error a)) := do
+def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
+  IO.eprintln! "runSequentially"
   let barrier : Concurrency.MVar Unit <- Concurrency.MVar.empty
   let wait : IO Unit := barrier.take
   let signal : m Unit := do
@@ -90,7 +101,7 @@ def runSequentially [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job I
   let job <- runConcurrently (Semaphore.mk wait pass) cancelQueue action
   return λnotifyPartial => signal *> job notifyPartial
 
-def JobQueue.enqueue [MonadLift IO m] (self : JobQueue) (concurrency : Concurrency) : Job IO progress a -> IO (Job m progress (Except IO.Error a)) :=
+def JobQueue.enqueue [ToString progress] [Monad m] [MonadLift IO m] (self : JobQueue) (concurrency : Concurrency) : Job BaseIO progress a -> IO (Job m progress (Except IO.Error a)) :=
   match concurrency with
   | .Sequential => runSequentially self.cancelQueue
   | .Concurrent => runConcurrently self.semaphore self.cancelQueue

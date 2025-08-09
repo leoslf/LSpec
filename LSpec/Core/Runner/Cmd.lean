@@ -17,7 +17,7 @@ set_option diagnostics true
 --   | .error error =>
 --     IO.eprintln s!"{error}"
 --     throw $ IO.userError s!"{error}"
--- 
+--
 -- def loadPackage (name : Lean.Name): CliM Package := do
 --   processOptions lakeOption
 --   let lakeOptions : LakeOptions <- getThe LakeOptions
@@ -27,7 +27,7 @@ set_option diagnostics true
 --   let workspace <- loadWorkspaceRoot loadConfig
 --   IO.println s!"packages: {workspace.packages.map (·.name)}"
 --   return workspace.packages.find? (·.name = name) |>.get!
--- 
+--
 -- def CliM.run' (self : CliM a) (args : List String := []) : IO a := do
 --   let (elanInstall?, leanInstall?, lakeInstall?) ← findInstall?
 --   let main := self.run' args |>.run' {args, elanInstall?, leanInstall?, lakeInstall?}
@@ -37,7 +37,7 @@ set_option diagnostics true
 --     | .ok a => return a
 --     | .error error => panic s!"{error}"
 --   | .error error => panic s!"{error}"
--- 
+--
 -- def package : IO Package := CliM.run' $ loadPackage `LSpec
 
 instance : ParseableType FailOn where
@@ -48,6 +48,13 @@ instance : ParseableType FailOn where
   | "pending" => .some .pending
   | "empty-description" => .some .emptyDescription
   | _ => .none
+
+inductive Formatter where
+| checks : Formatter
+| specdoc : Formatter
+| progress : Formatter
+| failedExamples : Formatter
+| silent : Formatter
 
 def version : String := "2.1.0"
 def description : String := ""
@@ -78,9 +85,10 @@ def cmd : Cmd := `[Cli|
                                             "(only works in combination with --rerun)"
     j, jobs : Nat;                          "run at most N parallelizable tests simultaneously (default: number of available processors)"
     seed : Seed;                            "used seed for --randomize and QuickCheck properties"
-    f, format : String;                     "use a custom formatter; this can be one of checks, specdoc, progress, failed-examples or silent"
-  
+    f, format : String;                   "use a custom formatter; this can be one of checks, specdoc, progress, failed-examples or silent"
+
   EXTENSIONS:
-    envVars
+    envVars;
+    defaultValues! #[("format", "progress")]
 ]
 

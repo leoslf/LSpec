@@ -26,9 +26,12 @@ structure FormatterState where
   startTime : Clock.Seconds
   config : Format.Config
   color? : Option SGR := .none
-deriving Repr
+deriving Repr, Inhabited
 
 abbrev FormatM := ReaderT (IO.Ref FormatterState) IO
+
+instance : MonadLift BaseIO FormatM where
+  monadLift := liftM (m := IO) (n := FormatM) ∘ liftM (m := BaseIO) (n := IO)
 
 def withLineBuffering (action : IO a) : IO a := do
   -- FIXME: lean 4 currently doesn't support changing buffering mode
@@ -78,6 +81,16 @@ def getTotalCount : FormatM Nat :=
 
 def useDiff : FormatM Bool :=
   getConfigValue Format.Config.useDiff
+
+def unlessExpert (action : FormatM Unit) : FormatM Unit := do
+  unless <- getConfigValue Format.Config.expertMode do
+    action
+
+def diffContext? : FormatM (Option DiffContext) := do
+  getConfigValue Format.Config.diffContext?
+
+def externalDiff? : FormatM (Option (String -> String -> IO Unit)) := do
+  getConfigValue Format.Config.externalDiff?
 
 -- | The random seed that is used for QuickCheck.
 def usedSeed : FormatM Seed :=

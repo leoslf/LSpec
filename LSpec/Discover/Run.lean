@@ -86,9 +86,9 @@ partial def specForest (directory : System.FilePath) : IO (Option Forest) := do
         pure .none
 
 def discover (source : System.FilePath) : IO (Option Forest) :=
-  let (directory, file) := source.splitFileName
+  let (directory, basename) := source.splitFileName
   let filterSrc : Forest -> Option Forest
-  | { hook, trees } => Forest.ensure hook $ (toSpec file |>.elim id (List.filter ∘ (λa b => a != b))) trees
+  | { hook, trees } => Forest.ensure hook $ (toSpec basename |>.elim id (List.filter ∘ (λa b => a != b))) trees
   (· >>= filterSrc) <$> specForest directory
 
 def mkModule : List String -> String :=
@@ -129,14 +129,14 @@ def moduleNames : List Spec -> List String :=
   moduleNames.fromForest
 
 def importList (specs : Option (List Spec)) : String :=
-  linesep.intercalate $ specs.elim [] moduleNames |>.map λspec => s!"import {spec}"
+  linesep.intercalate $ specs.elim [] moduleNames |>.map λspec => s!"import Test.{spec}"
 
 mutual
   partial def formatSpecs.fromForest : List Spec -> String :=
-    " >> ".intercalate ∘ List.map formatSpecs.fromTree
+    " *> ".intercalate ∘ List.map formatSpecs.fromTree
 
   partial def formatSpecs.fromTree : Spec -> String
-  | .Spec name => s!"describe \"{name}\" {name}Spec.spec"
+  | .Spec name => s!"describe \"{name}\" Test.{name}Spec.spec"
   | .Hook name forest => s!"({name}.hook $ {formatSpecs.fromForest forest})"
 end
 
@@ -152,22 +152,24 @@ def moduleName (source : System.FilePath) (config : DiscoverConfig) : Cli.Module
     else
       .mkSimple "Main"
 
-def driverWithFormatter (formatter : String) : String := sorry
+def driverWithFormatter (formatter : String) : String :=
+  "" -- FIXME -- sorry
 
 def mkSpecModule (source : System.FilePath) (config : DiscoverConfig) (nodes : Option (List Spec)) : String :=
   linesep.intercalate $ [
+    "import LSpec",
     importList nodes,
-    "open LSpec.Core (Spec lspec)",
+    "open LSpec.Core",
     -- NOTE: main has to be in the root namespace
     -- s!"namespace {moduleName source config}",
-    -- "def spec : Spec := " ++ formatSpecs nodes,
+    "def spec : Spec := " ++ formatSpecs nodes,
     config.formatter.elim driver driverWithFormatter
   ]
  where
   driver :=
     match config.noMain with
     | false =>
-      -- "def main (args : List String) : IO Unit := IO.withArgs args $ lspec spec"
-      "def main : IO Unit := do\n  IO.println \"Hello World\""
+      "def main := ArgsT.run $ lspec spec"
+      -- "def main : IO Unit := do\n  IO.println \"Hello World\""
     | true => ""
 

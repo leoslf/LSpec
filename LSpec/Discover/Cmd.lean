@@ -17,9 +17,11 @@ def parseConfig (parsed : Parsed) : IO DiscoverConfig := do
   pure config
 
 def runDiscoverCmd (p : Parsed) : IO UInt32 := do
-  let source := p.positionalArg! "source" |>.as! System.FilePath
-  let destination? := (·.as! System.FilePath) <$> p.flag? "destination"
-  -- let current : String := p.positionalArg! "current" |>.as! String
+  let source <- IO.FS.realPath $ p.flag! "source" |>.as! System.FilePath
+  IO.eprintln s!"source: {source}"
+  let destination? := p.flag? "destination" >>= (·.as? System.FilePath)
+  let current := p.flag? "current" >>= (·.as? System.FilePath) |>.getD (<- IO.appDir) 
+  IO.eprintln s!"current: {current}"
   let config <- parseConfig p
   let specs <- findSpecs source
   let write : String -> IO Unit :=
@@ -34,16 +36,16 @@ def discoverCmd : Cmd := `[Cli|
   FLAGS:
     module : ModuleName; "Module name"
     -- "output" : String;
+    source : System.FilePath;        "Source"
+    current : System.FilePath;       "Current"
     destination | LSPEC_DISCOVER_DESTINATION : String;   "Destination path"
 
   ARGS:
-    source : String;        "Source"
-    -- current : String;       "Current"
 
   EXTENSIONS:
     author "leoslf";
     defaultValues! #[
-      ("source", "Test"),
+      ("source", "Test/Spec.lean"),
     ];
     envVars
 ]

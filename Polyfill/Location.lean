@@ -1,7 +1,5 @@
 import Polyfill.CallStack
 
-namespace LSpec.Core
-
 structure Location where
   mk ::
   file : System.FilePath

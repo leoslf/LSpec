@@ -1,0 +1,54 @@
+-- import Polyfill.Location
+-- import LUnit.Lang
+--
+-- namespace LUnit
+--
+-- /-- Asserts that the specified condition holds. -/
+-- def assertBool (message : String) (condition : Bool) : Assertion := do
+--   unless condition do
+--     assertFailure message
+--
+-- /-- Signals an assertion failure if a non-empty message (i.e., a message other than \"\") is passed. -/
+-- def assertString (s : String) : Assertion := do
+--   unless s.isEmpty do
+--     assertFailure s
+--
+-- class Assertable t where
+--   assert : t -> Assertion
+--
+-- instance : Assertable Unit where
+--   assert := pure
+--
+-- instance : Assertable Bool where
+--   assert := assertBool ""
+--
+-- instance [Assertable t] : Assertable (IO t) where
+--   assert := (· >>= Assertable.assert)
+--
+-- class ListAssertable t where
+--   listAssert : List t -> Assertion
+--
+-- instance : ListAssertable Char where
+--   listAssert := assertString ∘ List.asString
+--
+-- instance : Assertable String where
+--   assert := assertString
+--
+-- instance [ListAssertable t] : Assertable (List t) where
+--   assert := ListAssertable.listAssert
+--
+-- class AssertionPredicate t where
+--   predicate : t -> IO Bool
+--
+-- instance : AssertionPredicate Bool where
+--   predicate := pure
+--
+-- instance [AssertionPredicate t] : AssertionPredicate (IO t) where
+--   predicate := (· >>= AssertionPredicate.predicate)
+--
+-- -- notation:1 predicate:10  " @? " message:11 => AssertionPredicate.predicate predicate >>= assertBool message
+-- --
+-- -- notation:1 expected:10  " @=? " actual:11 => assertEqual "" expected actual
+-- --
+-- -- notation:1 actual:10  " @?= " expected:11 => assertEqual "" expected actual
+--

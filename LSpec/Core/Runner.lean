@@ -13,14 +13,14 @@ namespace LSpec.Core.Runner
 
 open SpecTree (Item)
 open Config (ColorMode UnicodeMode)
-open Example (Params ActionWith ProgressCallback Result)
+open Example (Params Hook ProgressCallback Result)
 
 universe u
 
 def failWith (reason : String) (item : Item a) : Item a :=
   { item with example_ }
  where
-  example_ (params : Params) (hook : ActionWith a -> IO Unit) (progress : ProgressCallback) : IO Result := do
+  example_ (params : Params) (hook : Hook a) (progress : ProgressCallback) : BaseIO Result := do
     match (<- item.example_ params hook progress) with
     | { info, status } =>
       pure $ Result.mk info $
@@ -34,7 +34,7 @@ def failIf (predicate : Item a -> Bool) (reason : String) : SpecForest a -> Spec
 def failPending (item : Item a) : Item a :=
   { item with example_ }
  where
-  example_ (params : Params) (hook : ActionWith a -> IO Unit) (progress : ProgressCallback) : IO Result := do
+  example_ (params : Params) (hook : Hook a) (progress : ProgressCallback) : BaseIO Result := do
     match (<- item.example_ params hook progress) with
     | { info, status } =>
       pure $ Result.mk info $
@@ -72,31 +72,70 @@ def addDefaultDescriptions : SpecForest a -> SpecForest a :=
 def toEvalItemForest (params : Params) : SpecForest Unit -> List Eval.EvalTree :=
   Forest.bimap id toEvalItem ∘ Forest.filter Item.isFocused
  where
-  withUnit (action : ActionWith Unit) : IO Unit :=
-    action ()
+  withUnit : Hook Unit := λaction => action ()
 
   toEvalItem : Item Unit -> Eval.EvalItem
-  | { requirement, location?, parallelizable, example_, .. } =>
+  | { requirement, location?, parallelizable?, example_, .. } =>
     {
       description := requirement,
       location? := location?,
-      concurrency := if parallelizable == .some true then .Concurrent else .Sequential,
+      concurrency := if parallelizable? == .some true then .Concurrent else .Sequential,
       action := λprogress => Clock.measure $ example_ params withUnit progress,
     }
 
+def focusSpec (config : Config) (spec : SpecForest a) : SpecForest a :=
+  if config.focusedOnly then
+    spec
+  else
+    spec.focus
+
+def applyDryRun (config : Config) : Eval.EvalForest -> Eval.EvalForest :=
+  if config.dryRun then
+    Forest.bimap removeCleanup markSuccess
+  else
+    id
+ where
+  removeCleanup : IO Unit -> IO Unit := λ_ => pass
+
+  markSuccess (item : Eval.EvalItem) : Eval.EvalItem :=
+    { item with action := λ_ => pure (0, Example.Result.mk "" .Success) }
+
+def applyFilterPredicates (config : Config) : Forest c Eval.EvalItem -> Forest c Eval.EvalItem :=
+  Forest.filterWithLabels predicate
+ where
+  includes : Path -> Bool := config.filter?.getD $ Function.const _ true
+  skips : Path -> Bool := config.skip?.getD $ Function.const _ false
+
+  predicate (groups : List String) (item : Eval.EvalItem) : Bool :=
+    let path := (groups, item.description)
+    includes path && not (skips path)
+
 def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.EvalForest :=
-  failItemsWithEmptyDescription config
+  id
+  >>>> debug (s!"before: {·}")
+  >>>> failItemsWithEmptyDescription config
+  >>>> debug (s!"after failItemsWithEmptyDescription: {·}")
   >>>> addDefaultDescriptions
+  >>>> debug (s!"after addDefaultDescriptions: {·}")
   >>>> failFocusedItems config
+  >>>> debug (s!"after failFocusedItems: {·}")
   >>>> failPendingItems config
+  >>>> debug (s!"after failPendingItems: {·}")
   -- >>>> Extension.applySpecTransformation config
-  -- >>>> focusSpec config
+  -- >>>> dbgTraceVal
+  >>>> focusSpec config
+  >>>> debug (s!"after focusSpec: {·}")
   >>>> toEvalItemForest params
-  -- >>>> applyDryRun config
-  -- >>>> applyFilterPredicates config
+  >>>> debug (s!"after toEvalItemForest: {·}")
+  >>>> applyDryRun config
+  >>>> debug (s!"after applyDryRun: {·}")
+  >>>> applyFilterPredicates config
+  >>>> debug (s!"applyFilterPredicates: {·}")
   >>>> randomize
+  >>>> debug (s!"after randomize: {·}")
   -- FIXME:
-  -- >>>> Forest.prune
+  >>>> Forest.prune
+  >>>> debug (s!"after Forest.prune: {·}")
  where
   params : Params := Params.mk
 
@@ -105,6 +144,8 @@ def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.E
       Forest.randomize seed.toNat
     else
       id
+  debug {a} [ToString a] (format : a -> String) (value : a) : a :=
+    dbgTrace (format value) $ λ() => value
 
 inductive ProgressReporting where
 | Disabled : ProgressReporting
@@ -152,10 +193,12 @@ def unicodeOutputSupported (mode : UnicodeMode) (stream : IO.FS.Stream) : IO Boo
   | .never => pure false
   | .always => pure true
 
-def withHiddenCursor (progress : ProgressReporting) (stream : IO.FS.Stream) : IO a -> IO a :=
-  match progress with
-  | .Disabled => id
-  | .Enabled => IO.bracket_ stream.hideCursor stream.showCursor
+def withHiddenCursor [Monad m] [MonadFinally m] [MonadLift IO m] (progress : ProgressReporting) (stream : IO.FS.Stream) : m a -> m a :=
+  -- FIXME
+  id
+  -- match progress with
+  -- | .Disabled => id
+  -- | .Enabled => IO.bracket_ stream.hideCursor stream.showCursor
 
 def getDefaultConcurrentJobs : IO Nat :=
   IO.nproc

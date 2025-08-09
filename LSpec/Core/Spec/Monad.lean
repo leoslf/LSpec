@@ -16,8 +16,7 @@ structure Env where
   specDescriptionPath : List String
 deriving Repr
 
-abbrev SpecM a r :=
-  WriterT (Function.End Config × SpecForest a) (ReaderT Env IO) r
+abbrev SpecM a := WriterT (Function.End Config × SpecForest a) (ReaderT Env IO)
 
 #synth Monad IO
 #synth ∀α, Monoid (Function.End Config × SpecForest α)
@@ -27,15 +26,19 @@ abbrev SpecM a r :=
 #synth ∀a, Functor (SpecM a)
 #synth ∀a, Applicative (SpecM a)
 #synth ∀a, Monad (SpecM a)
--- #synth ∀a, MonadIO (SpecM a)
 
-abbrev SpecWith a := SpecM a Unit
-abbrev Spec := SpecWith Unit
+-- NOTE: abbrev is NOT transparent
+-- Defining SpecWith and Spec as notation with parentheses delays the type application, eventually allowing do-notation
+notation:max "SpecWith " a:max => (SpecM a Unit)
+notation:max "Spec" => (SpecM Unit Unit)
 
-def SpecWith.run : SpecWith a -> IO (Function.End Config × SpecForest a) :=
+#check SpecWith Unit
+#check Spec
+
+def SpecM.run : SpecWith a -> IO (Function.End Config × SpecForest a) :=
   flip ReaderT.run (Env.mk []) ∘ WriterT.exec
 
-def SpecWith.evaluate (config : Config) (spec : SpecWith a) : IO (Config × SpecForest a) := do
+def SpecM.evaluate (config : Config) (spec : SpecWith a) : IO (Config × SpecForest a) := do
   let (f, forest) <- spec.run
   return (f config, forest)
 

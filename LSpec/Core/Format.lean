@@ -5,7 +5,6 @@ import Concurrency.MVar
 import LSpec.Prelude
 import LSpec.Core.Seed
 import LSpec.Core.Path
-import LSpec.Core.Location
 import LSpec.Core.DiffContext
 import LSpec.Core.Clock
 
@@ -25,7 +24,10 @@ structure Item where
   duration : Seconds
   info : String
   result : Result.Status
-deriving Repr, BEq
+deriving Repr, BEq, TypeName
+
+instance : ToString Item where
+  toString := reprStr
 
 inductive Event where
 | Started : Event
@@ -35,7 +37,7 @@ inductive Event where
 | ItemStarted (path : Path) : Event
 | ItemDone (path : Path) (item : Item) : Event
 | Done (results : List (Path × Item)) : Event
-deriving Repr, BEq
+deriving Repr, BEq, Inhabited, TypeName
 
 structure Config where
   mk ::
@@ -54,7 +56,7 @@ structure Config where
   usedSeed : Seed := 0
   expectedTotalCount : Nat := 0
   expertMode : Bool := false
-deriving Inhabited, Repr
+deriving Repr, Inhabited, TypeName
 
 -- instance : Inhabited Config where
 --   default := {
@@ -78,6 +80,7 @@ deriving Inhabited, Repr
 inductive Signal where
 | Ok : Signal
 | NotOk (e : IO.Error) : Signal
+deriving Inhabited, TypeName
 
 end Format
 
@@ -85,19 +88,19 @@ open Format
 
 abbrev Format := Format.Event -> IO Unit
 
-partial def monadic [Monad m] [MonadLift IO m] (run : m Unit -> IO Unit) (format : Format.Event -> m Unit) : IO Format := do
+partial def monadic [Monad m] [MonadLift BaseIO m] (run : m Unit -> IO Unit) (format : Format.Event -> m Unit) : BaseIO Format := do
   let event : MVar Format.Event <- MVar.empty
   let done : MVar Signal <- MVar.empty
 
-  let putEvent : Event -> IO Unit := event.put
+  let putEvent : Event -> BaseIO Unit := event.put
 
-  let takeEvent {n} [MonadLift IO n] : n Event :=
-    liftM event.take
+  let takeEvent {n} [Monad n] [MonadLift BaseIO n] : n Event :=
+    liftM $ event.take
 
-  let signal {n} [MonadLift IO n] : Signal -> n Unit :=
+  let signal {n} [MonadLift BaseIO n] : Signal -> n Unit :=
     liftM ∘ done.put
 
-  let wait : IO Signal :=
+  let wait : BaseIO Signal :=
     done.take
 
   let rec go : m Unit := do
@@ -126,10 +129,8 @@ partial def monadic [Monad m] [MonadLift IO m] (run : m Unit -> IO Unit) (format
         let _ <- IO.wait worker
         throw e
 
-  pure result
+  return result
  where
-  isRunning {a} (task : Task a) : IO Bool := do
+  isRunning {a} (task : Task a) : BaseIO Bool := do
     (· == .running) <$> IO.getTaskState task
-
-abbrev Formatter := String × (Format.Config -> IO Format)
 

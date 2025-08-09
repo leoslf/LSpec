@@ -11,6 +11,7 @@ inductive Status where
 | Success : Status
 | Pending : Status
 | Failure : Status
+| Canceled : Status
 deriving Repr, DecidableEq
 
 def Status.isFailure : Status -> Bool
@@ -34,6 +35,9 @@ structure SpecResult where
   success : Bool
 deriving Repr, DecidableEq, Inhabited
 
+instance : ToString SpecResult where
+  toString := reprStr
+
 def toSpecResultItem : Path × Format.Item -> SpecResult.Item
 | (path, item) =>
   {
@@ -55,6 +59,9 @@ structure Summary where
   examples : Nat
   failures : Nat
 deriving Repr, DecidableEq
+
+instance : ToString Summary where
+  toString := reprStr
 
 instance : Inhabited Summary where
   default := {

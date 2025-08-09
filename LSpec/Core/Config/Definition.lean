@@ -96,7 +96,7 @@ structure Config where
   formatException : IO.Error -> String := IO.Error.formatExceptionWith toString
   times : Bool := false
   expertMode : Bool := false
-  availableFormatters : List Formatter
+  availableFormatters : List (String × V2.Formatter)
   format? : Option (Format.Config -> IO Format) := .none
   -- FIXME: universe-level problems
   -- formatter? : Option V1.Formatter := .none
@@ -104,6 +104,9 @@ structure Config where
   concurrentJobs : Option Nat := .none
   annotations : Annotations := {}
 deriving Inhabited, Repr
+
+instance : ToString Config where
+  toString := reprStr
 
 #check Config
 -- #print Config
@@ -113,7 +116,7 @@ deriving Inhabited, Repr
 -- #check Format.Config
 -- #check Config
 
-def Config.mkDefault (formatters : List Formatter) : Config :=
+def Config.mkDefault (formatters : List (String × V2.Formatter)) : Config :=
   {
     availableFormatters := formatters
   }
@@ -126,7 +129,7 @@ instance : Inhabited Config where
       ("progress", V2.progress),
       ("failed-examples", V2.failed_examples),
       ("silent", V2.silent),
-    ] |>.map $ second V2.Formatter.toFormat
+    ]
 
 -- set_option diagnostics true
 

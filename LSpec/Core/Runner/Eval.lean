@@ -1,14 +1,15 @@
 import LSpec.Core.Path
 import LSpec.Core.Tree
-import LSpec.Core.Location
 import LSpec.Core.Clock
 import LSpec.Core.Timer
 import LSpec.Core.Config.Definition
+import LSpec.Core.Example
 import LSpec.Core.Format
 import LSpec.Core.Runner.JobQueue
 
 namespace LSpec.Core.Runner.Eval
 
+open LSpec.Core (Example)
 open LSpec.Core.Timer
 
 structure EvalItem where
@@ -16,7 +17,7 @@ structure EvalItem where
   description : String
   location? : Option Location
   concurrency : Concurrency
-  action : Example.ProgressCallback -> IO (Clock.Seconds × Example.Result)
+  action : Example.ProgressCallback -> BaseIO (Clock.Seconds × Example.Result)
 deriving Repr
 
 abbrev EvalTree := LSpec.Core.Tree (IO Unit) EvalItem
@@ -70,6 +71,9 @@ structure Config where
   colorMode : ColorMode
 deriving Repr
 
+instance : ToString Config where
+  toString := reprStr
+
 structure Env where
   mk ::
   config : Config
@@ -80,6 +84,9 @@ def Env.new (config : Config) : BaseIO Env := do
   Env.mk config <$> IO.mkRef false <*> IO.mkRef []
 
 abbrev EvalM := ReaderT Env IO
+
+instance [TypeName a] : ToString (EvalM a) where
+  toString _ := s!"EvalM {parenthesize $ reprStr $ TypeName.typeName a}"
 
 instance : MonadLift IO EvalM := inferInstance
 
@@ -104,7 +111,7 @@ def applyFailFast : (Example.Result -> Bool) -> RunningTree Unit IO -> RunningTr
   -- fmap''' (f : IO (Clock.Seconds × Example.Result) -> EvalM (Clock.Seconds × Example.Result)) : (Path -> IO (Clock.Seconds × Example.Result)) -> (Path -> EvalM (Clock.Seconds × Example.Result)) := instBinaryFunctionFunctor.map
 
   applyToItem (abortEarly : Example.Result -> Bool) (action : IO (Clock.Seconds × Example.Result)) : EvalM (Clock.Seconds × Example.Result) := do
-    let result@(_, r) <- liftM action
+    let result@(_, r) <- action
     if abortEarly r then
       abort
     return result
@@ -116,15 +123,17 @@ def mergeResults (callSite? : Option (String × Location)) (result : Example.Res
   }
 
 def addCleanupToItem (shouldRunCleanup : Example.Result -> Bool) (location? : Option (String × Location)) (cleanup : IO Unit) (item : RunningItem IO) : RunningItem IO :=
-  {
-    item with
-    action := λpath => do
-      let result@(t, r) <- (item.action path : IO (Clock.Seconds × Example.Result))
-      if shouldRunCleanup (r : Example.Result) then
-        let (t', r') <- Clock.measure $ Example.Result.Status.safeEvaluate (cleanup *> pure .Success)
-        return (t + t', mergeResults location? r r')
-      return result
-  }
+  { item with action }
+ where
+  action (path : Path) : IO (Clock.Seconds × Example.Result) := do
+    let result@(t, r) <- item.action path
+    if shouldRunCleanup (r : Example.Result) then
+      let action : ExpectationM Example.Result.Status := do
+        liftM cleanup
+        return .Success
+      let (t', r') <- Clock.measure $ Example.Result.Status.safeEvaluate action
+      return (t + t', mergeResults location? r r')
+    return result
 
 def mapHead (f : a -> a) : List a -> List a
 | [] => []
@@ -233,6 +242,7 @@ def reportResult (path : Path) (location? : Option Location) : Clock.Seconds × 
           match error with
           | .NoReason
           | .Reason _
+          | .Canceled
           | .ExpectedButGot _ _ _ => error
           | .Error _ _ => error
           | .ColorizedReason reason => .Reason reason.stripAnsi
@@ -242,7 +252,10 @@ def reportItem (path : Path) (location? : Option Location) (action : EvalM (Cloc
   reportResult path location? =<< action
 
 def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
-  sequenceActions $ specs.flatMap foldSpec
+  try
+    sequenceActions $ specs.flatMap foldSpec
+  finally
+    IO.eprintln! "after eval"
  where
   evalItem (groups : List String) (item : RunningItem EvalM) : EvalM Unit := do
     let path : Path := (groups, item.description)
@@ -263,7 +276,7 @@ def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
 def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Format.Item)) := do
   withJobQueue config.concurrentJobs λqueue => do
     withTimer 0.05 λtimer => do
-      IO.eprintln s!"runFormatter {specs}"
+      IO.eprintln! s!"runFormatter {specs}"
       let env <- Env.new config
       let runningSpecs_ <- queue.enqueueItems specs
       let applyReportProgress (item : RunningItem_ IO) : RunningItem IO :=
@@ -277,18 +290,22 @@ def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Form
       format .Started
 
       try
-        IO.eprintln "ReaderT.run"
+        IO.eprintln! "ReaderT.run"
         ReaderT.run (eval runningSpecs) env
-        IO.eprintln "after ReaderT.run"
+        IO.eprintln! "after ReaderT.run"
+      catch
+      | e => do
+        formatDone
+        throw e
       finally
         formatDone
 
       let results <- getResults
-      IO.eprintln s!"results: {results}"
-      pure results
+      IO.eprintln! s!"results: {results}"
+      return results
  where
   format := config.format
 
-  reportProgress (timer : IO Bool) (path : Path) (progress : Example.Progress) : IO Unit := do
+  reportProgress (timer : BaseIO Bool) (path : Path) (progress : Example.Progress) : IO Unit := do
     if <- timer then
       format $ .Progress path progress

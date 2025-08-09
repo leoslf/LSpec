@@ -21,6 +21,7 @@ def Failure.Reason.unlift : V2.Failure.Reason -> Failure.Reason
 | .ColorizedReason reason => .Reason reason.stripAnsi
 | .ExpectedButGot preface expected actual => .ExpectedButGot preface expected actual
 | .Error info e => .Error info e
+| .Canceled => .Canceled
 
 def Failure.unlift (v2 : V2.Failure) : Failure := {
   location? := v2.location?
@@ -40,7 +41,7 @@ structure Formatter where
   examplePending : Path -> String -> Option String -> FormatM Unit
   failed : FormatM Unit
   footer : FormatM Unit
-deriving Inhabited, Repr
+deriving Inhabited
 
 #check Formatter
 

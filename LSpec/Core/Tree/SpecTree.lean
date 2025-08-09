@@ -2,6 +2,7 @@ import LSpec.Prelude
 
 import LSpec.Core.Annotations
 import LSpec.Core.Example
+import LSpec.Core.Expectations
 
 import LSpec.Core.Tree.Basic
 import LSpec.Core.Tree.Instances
@@ -18,11 +19,23 @@ structure Item (a : Type u) where
   requirement : String
   location? : Option Location
   /-- A flag that indicates whether it is safe to evaluate this spec item in parallel with other spec items -/
-  parallelizable : Option Bool
+  parallelizable? : Option Bool
   /-- A flag that indicates whether this spec item is focused -/
   isFocused : Bool
   annotations : Annotations
-  example_ : Params -> (ActionWith a -> IO Unit) -> ProgressCallback -> IO Result
+  example_ (params : Params) (hook : Hook a) (progress : ProgressCallback) : BaseIO Result
+
+def Item.reprPrec (self : Item a) (prec : Nat) : Std.Format :=
+  "SpecTree.Item"
+    ++ " (requirement: " ++ Repr.reprPrec self.requirement prec ++ ") "
+    ++ " (location?: " ++ Repr.reprPrec self.location? prec ++ ")"
+    ++ " (parallelizable?: " ++ Repr.reprPrec self.parallelizable? prec ++ ")"
+    ++ s!" (isFocused: {self.isFocused})"
+    ++ " (<annotations>)"
+    ++ " (<example_>)"
+
+instance : Repr (Item a) where
+  reprPrec := Item.reprPrec
 
 def Item.setAnnotation [TypeName V] (value : V) (item : Item a) : Item a :=
   { item with annotations := item.annotations.setValue value }
@@ -33,6 +46,11 @@ def Item.getAnnotation [TypeName V] (item : Item a) : Option V :=
 end SpecTree
 
 abbrev SpecTree a := Tree (IO Unit) (SpecTree.Item a)
+
+partial def SpecTree.any (predicate : SpecTree.Item a -> Bool) : SpecTree a -> Bool
+| .Node _ children => children.any $ SpecTree.any predicate
+| .NodeWithCleanup _ _ children => children.any $ SpecTree.any predicate
+| .Leaf item => predicate item
 
 abbrev SpecForest a := List (SpecTree a)
 
@@ -46,14 +64,14 @@ def SpecForest.mapIf (predicate : SpecTree.Item a -> Bool) (f : SpecTree.Item a 
     else
       item
 
-def location /- [HasCallStack] -/ (_ : Unit) : Option Location :=
-  (Location.of ∘ Prod.snd) <$> callSite ()
+def SpecForest.any (predicate : SpecTree.Item a -> Bool) (self : SpecForest a) : Bool :=
+  List.any self $ SpecTree.any predicate
 
-def toModuleName (path : System.FilePath) : String :=
-  ".".intercalate $ path.parent.get!.components.concat path.fileStem.get!
-
-def formatDefaultDescription : Location -> String
-| { file, line, column } => s!"{toModuleName file}[{line}:{column}]"
+def SpecForest.focus (self : SpecForest a) : SpecForest a :=
+  if self.any SpecTree.Item.isFocused then
+    self
+  else
+    self.map λitem => { item with isFocused := true }
 
 /-- Combines a list of specs into a larger spec -/
 def specGroup (label : String) : SpecForest a -> SpecTree a :=
@@ -69,7 +87,7 @@ def specItem [Example e] (label : String) (example_ : e) : SpecTree (Arg e) :=
   .Leaf {
     requirement := label
     location? := location ()
-    parallelizable := .none
+    parallelizable? := .none
     isFocused := false
     annotations := {}
     example_ := Example.safeEvaluate example_

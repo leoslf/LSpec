@@ -13,10 +13,10 @@ def toMicroseconds (seconds : Seconds) : Float :=
 def fromMilliseconds (ms : Float) : Seconds :=
   ms / 10 ^ 3
 
-def getMonotonicTime : IO Seconds :=
+def getMonotonicTime : BaseIO Seconds :=
   fromMilliseconds <$> Float.ofNat <$> IO.monoMsNow
 
-def measure (action : IO a) : IO (Seconds × a) := do
+def measure [Monad m] [MonadLift BaseIO m] (action : m a) : m (Seconds × a) := do
   let t0 <- Seconds.getMonotonicTime
   let a <- action
   let t1 <- Seconds.getMonotonicTime
@@ -25,22 +25,25 @@ def measure (action : IO a) : IO (Seconds × a) := do
 def sleep (seconds : Seconds) : BaseIO Unit := do
   IO.sleep $ seconds.toMilliseconds.toUInt32
 
--- def timeout (seconds : Seconds) (action : IO a) : IO (Option a) := do
---   .some <$> action -- FIXME: action -- sorry
---   -- let token <- IO.CancelToken.new
---   -- let watchdog <- IO.asTask $ do
---   --   sleep seconds
---   --   token.set
---   -- let result <- do
---   --   try
---   --     action
---   --   catch
---   --   | e => do
---   --     IO.cancel watchdog
---   -- IO.cancel watchdog
---   -- return result
+def timeout [Monad m] [MonadFinally m] [MonadLift BaseIO m] (seconds : Seconds) (action : m a) : m (Option a) := do
+  .some <$> action
+  -- let token <- IO.CancelToken.new
+  -- let watchdog <- BaseIO.asTask $ do
+  --   sleep seconds
+  --   token.set
+  -- IO.bracket watchdog IO.cancel do
+  --   if <- IO.checkCanceled then
+  --     action
+  -- let result <- do
+  --   try
+  --     action
+  --   catch
+  --   | e => do
+  --     IO.cancel watchdog
+  -- IO.cancel watchdog
+  -- return result
 
 end Seconds
 
-export Seconds (measure sleep /- timeout -/)
+export Seconds (measure sleep timeout)
 

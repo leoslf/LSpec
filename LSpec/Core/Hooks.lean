@@ -1,0 +1,19 @@
+-- variable {m : Type -> Type} [Monad m] [MonadLift IO m]
+-- variable {a b : Type}
+--
+-- def modifyHook : (action : ActionWith a -> ActionWith b) (item : SpecTree.Item a) : SpecTree.Item b :=
+--   {
+--     item with
+--     example_ := λparams hook => item.example_ params (hook ∘ action)
+--   }
+--
+-- def aroundWith : (action : ActionWith a -> ActionWith b) -> SpecWith a -> SpecWith b :=
+--   mapSpecItem ∘ modifyHook
+--
+-- /-- Run a custom action before and/or after every spec item. -/
+-- def around (action : ActionWith a -> m Unit) : SpecWith a -> Spec :=
+--   aroundWith λe () => action e
+--
+-- /-- Run a custom action before every spec item. -/
+-- def before (action : m a) : SpecWith a -> Spec :=
+--   around

@@ -15,6 +15,7 @@ structure ConfigFile where
   mk ::
   path : System.FilePath
   args : List String
+deriving Repr, BEq, Inhabited, TypeName
 
 -- def runnerOptions : List (Declarative.Types.Option' Config) := [] -- TODO
 --
@@ -102,6 +103,7 @@ def readConfigFiles : IO (List ConfigFile) := do
 -- set_option pp.universes true
 
 def parseOptions (cmd : Cli.Cmd) (args : List String) (config : Config) : EIO (ExitCode × String) (List String × Config) := do
+  let mut warnings : List String := []
   let mut config := config
   match ((<- cmd.process' args |>.toBaseIO) : Except String Cli.Parsed) with
   | .ok parsed =>
@@ -117,7 +119,14 @@ def parseOptions (cmd : Cli.Cmd) (args : List String) (config : Config) : EIO (E
       config := { config with failOn := Std.HashSet.ofArray $ failOn.as! (Array FailOn) }
 
     -- IO.println config.failOn.toArray
-    pure ([], config)
+    if let .some format := parsed.flag? "format" then
+      let format := format.as! String
+      let formatter? := config.availableFormatters.lookup format
+      if formatter?.isNone then
+        warnings := warnings.concat s!"unknown format: {format}"
+      config := { config with format? := (·.toFormat) <$> formatter? }
+
+    pure (warnings, config)
   | .error error =>
     throw (.Failure 2, error)
 

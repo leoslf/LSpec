@@ -4,10 +4,11 @@ import LSpec.Core.Path
 import LSpec.Core.Clock
 import LSpec.Core.Format
 import LSpec.Core.Formatters.V2.Monad
+import LSpec.Core.Formatters.Diff
 
 namespace LSpec.Core.Formatters
 
-open LSpec.Core.Clock (Seconds)
+open LSpec.Core.Clock (Seconds timeout)
 
 def V2 := Unit
 
@@ -27,7 +28,9 @@ structure Formatter where
   itemStarted : Path -> FormatM Unit
   itemDone : Path -> Format.Item -> FormatM Unit
   done : FormatM Unit
-deriving Repr
+
+instance : Repr Formatter where
+  reprPrec _ _ := "V2.Formatter"
 
 def Formatter.toFormat (formatter : Formatter) (config : Format.Config) : IO Format :=
   -- TODO:
@@ -74,6 +77,72 @@ def checks : Formatter :=
 
 set_option linter.unusedVariables false
 
+def indentation : String := "       "
+
+def formatOmittedLines (n : Nat) : String :=
+  s!"@@ {n} lines omitted @@"
+
+inductive ColorChunk where
+| plain : String -> ColorChunk
+| color : String -> ColorChunk
+deriving Repr, BEq, Inhabited, TypeName
+
+inductive Chunk where
+| original : String -> Chunk
+| modified : String -> Chunk
+| info : String -> Chunk
+| modifiedChunks : List ColorChunk -> Chunk
+deriving Repr, BEq, Inhabited, TypeName
+
+def expectedChunks : List LineDiff -> List Chunk :=
+  List.flatMap λ
+  | .both lines => lines.map .original
+  | .first lines => lines.map .modified
+  | .second _ => []
+  | .omitted n => [.info $ formatOmittedLines n]
+  | .singleLineDiff diffs =>
+    pure $ .modifiedChunks $ diffs.filterMap λ
+      | .first _ => .none
+      | .second chunk => .some $ .color chunk
+      | .both chunk => .some $ .plain chunk
+
+def actualChunks : List LineDiff -> List Chunk :=
+  List.flatMap λ
+  | .both lines => lines.map .original
+  | .first _ => []
+  | .second lines => lines.map .modified
+  | .omitted n => [.info $ formatOmittedLines n]
+  | .singleLineDiff diffs =>
+    pure $ .modifiedChunks $ diffs.filterMap λ
+      | .first chunk => .some $ .color chunk
+      | .second _ => .none
+      | .both chunk => .some $ .plain chunk
+
+def writeChunks (pre : String) (chunks : List Chunk) (colorize : String -> FormatM Unit) : FormatM Unit := do
+  withFailColor $ write (indentation ++ pre)
+  go pass chunks
+ where
+  indentation_ : String := indentation ++ String.replicate pre.length ' '
+
+  go (indent_ : FormatM Unit) : (chunks : List Chunk) -> FormatM Unit
+  | [] => pass
+  | chunk :: chunks => do
+    indent_
+    match chunk with
+    | .original a => write a
+    | .modified a => colorize a
+    | .info text => withInfoColor $ write text
+    | .modifiedChunks chunks' =>
+      chunks'.forM λ
+      | .plain a => write a
+      | .color a => colorize a
+    write "\n"
+    go (write indentation_) chunks
+
+def writeDiff (chunks : List LineDiff) (extra : String -> FormatM Unit) (missing : String -> FormatM Unit) : FormatM Unit := do
+  writeChunks "expected: " (expectedChunks chunks) extra
+  writeChunks " but got: " (actualChunks chunks) extra
+
 def defaultFailedFormatter : FormatM Unit := do
   writeLine ""
 
@@ -92,6 +161,8 @@ def defaultFailedFormatter : FormatM Unit := do
   indentation := "       "
   indent := indentBy indentation
 
+  evaluate := pure
+
   formatFailure : Nat -> Failure -> FormatM Unit
   | n, { location?, path, message := reason } => do
     let unicode <- outputUnicode
@@ -103,23 +174,42 @@ def defaultFailedFormatter : FormatM Unit := do
     | .NoReason => pure ()
     | .Reason err => withFailColor $ indent err
     | .ColorizedReason err => indent err
-    | .ExpectedButGot preface expected_ actual_ => do
+    | .ExpectedButGot preface? expected_ actual_ => do
       let pretty <- prettyPrintFunction
       let (expected, actual) :=
         match pretty with
         | .none => (expected_, actual_)
         | .some f => f expected_ actual_
-      preface.forM indent
+      preface?.forM indent
 
-      -- let b <- useDiff
-      -- TODO
+      let threshold : Clock.Seconds := 2
+      match <- externalDiff? with
+      | .some externalDiff => do
+        externalDiff expected actual
+      | .none => do
+        let chunks? <-
+          if <- useDiff then
+            timeout threshold $ evaluate $ lineDiff (<- diffContext?) expected actual 
+          else
+            pure .none
+        match chunks? with
+        | .some chunks => do
+          writeDiff chunks extraChunk missingChunk
+        | .none => do
+          writeDiff [.first (splitLines expected), .second (splitLines actual)] write write
+      
+    | .Canceled => withFailColor $ indent "canceled"
     | .Error info e => do
       info.forM indent
       let formatException <- getConfigValue Format.Config.formatException
       withFailColor ∘ indent $ s!"uncaught exception: {e}"
 
+    -- FIXME:
     -- unlessExpert $ do
-    --   -- TODO
+
+def pluralize : (n : Nat) -> (s : String) -> String
+| 1, s => s!"1 {s}"
+| n, s => s!"n {s}s"
 
 def defaultFooter : FormatM Unit := do
   writeLine =<< (· ++ ·)
@@ -130,8 +220,24 @@ def defaultFooter : FormatM Unit := do
   let pending <- getPendingCount
   let total <- getTotalCount
 
-  -- TODO
-  pure ()
+  let output := ", ".intercalate $ [
+    pluralize total "example",
+    pluralize fails "failure",
+  ] ++ [
+    Option.some pending
+      |>.filter (· > 0)
+      |>.map (s!"{·} pending")
+  ].reduceOption
+
+  let color :=
+    if fails > 0 then
+      withFailColor
+    else if pending > 0 then
+      withPendingColor
+    else
+      withSuccessColor
+
+  color $ writeLine output
 
 set_option linter.unusedVariables true
 

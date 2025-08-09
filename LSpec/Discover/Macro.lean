@@ -32,7 +32,7 @@ elab "#lspec" "discover" : command => do
   let context <- read
   let generated <- IO.Process.run {
     cmd := "lake",
-    args := #["exe", "lspec-discover", context.fileName]
+    args := #["exe", "lspec-discover", "--source", context.fileName]
   }
   logInfo s!"generated: {generated}"
   let cmds <- parse generated

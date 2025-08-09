@@ -1,10 +1,8 @@
 import Free
 
-import LSpec.Exception
 import LSpec.Core.Seed
 import LSpec.Core.Clock
 import LSpec.Core.Path
-import LSpec.Core.Location
 
 namespace LSpec.Core.Formatters.V1
 
@@ -18,6 +16,7 @@ inductive Failure.Reason where
 | Reason (reason : String) : Failure.Reason
 | ExpectedButGot (preface? : Option String) (expected : String) (actual : String) : Failure.Reason
 | Error (info? : Option String) (e : Exception) : Failure.Reason
+| Canceled : Failure.Reason
 deriving Repr, BEq
 
 structure Failure where
