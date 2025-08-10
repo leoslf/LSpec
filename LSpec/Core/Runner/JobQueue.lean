@@ -78,7 +78,6 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
         result.put $ Partial.Partial p
       action partialResult
     finally
-      IO.eprintln! s!"worker: done"
       result.put Partial.Done
 
   let pushOnCancelQueue (task : Task (Except IO.Error a)) : IO Unit := do
@@ -92,7 +91,6 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
   return waitForResult
 
 def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
-  IO.eprintln! "runSequentially"
   let barrier : Concurrency.MVar Unit <- Concurrency.MVar.empty
   let wait : IO Unit := barrier.take
   let signal : m Unit := do

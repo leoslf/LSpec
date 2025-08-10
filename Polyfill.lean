@@ -2,6 +2,8 @@ import Polyfill.EState
 import Polyfill.Location
 import Polyfill.Exception
 
+import Polyfill.Debug
+
 import Polyfill.Except
 
 import Polyfill.Repr

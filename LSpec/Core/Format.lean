@@ -121,7 +121,7 @@ partial def monadic [Monad m] [MonadLift BaseIO m] (run : m Unit -> IO Unit) (fo
       signal $ .NotOk e
 
   let result (event : Event) : IO Unit := do
-    unless (<- isRunning worker) do
+    if <- isRunning worker then
       putEvent event
       match (<- wait) with
       | .Ok => pure ()

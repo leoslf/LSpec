@@ -44,6 +44,18 @@ instance (priority := high) [Repr a] : ToString (Tree c a) where
 instance [Repr a] : Repr (Forest c a) where
   reprPrec := Forest.reprPrec
 
+def Tree.foldl (f : b -> Tree c a -> b) (initial : b) (self : Tree c a) : b :=
+  match self with
+  | .Node _ children => children.foldl f $ f initial self
+  | .NodeWithCleanup _ _ children => children.foldl f $ f initial self
+  | .Leaf _ => f initial self
+
+def Tree.foldr (f : Tree c a -> b -> b) (initial : b) (self : Tree c a) : b :=
+  match self with
+  | .Node _ children => children.foldr f $ f self initial
+  | .NodeWithCleanup _ _ children => children.foldr f $ f self initial
+  | .Leaf _ => f self initial
+
 mutual
   def Tree.size : Tree c a -> Nat
   | .Node _ children => 1 + Forest.size children
@@ -53,6 +65,12 @@ mutual
   def Forest.size (forest : Forest c a) : Nat :=
     forest.map Tree.size |>.sum
 end
+
+def Tree.leafs (self : Tree c a) : Nat :=
+  self.foldr (Function.const _ Nat.succ) 0
+
+def Forest.leafs (self : Forest c a) : Nat :=
+  self.map Tree.leafs |>.sum
 
 def Tree.children : Tree c a -> Forest c a
 | .Node _ children => children

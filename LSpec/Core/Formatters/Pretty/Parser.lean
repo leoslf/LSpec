@@ -1,4 +1,8 @@
+import LSpec.Parser
+
 namespace LSpec.Core.Formatters.Pretty
+
+abbrev Parser := LSpec.Parser String
 
 abbrev Name := String
 

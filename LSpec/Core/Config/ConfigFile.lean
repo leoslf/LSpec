@@ -9,6 +9,8 @@ import LSpec.Core.Runner.Cmd
 
 namespace LSpec.Core
 
+open LSpec.Core.Config
+
 -- open GetOpt
 
 structure ConfigFile where
@@ -34,13 +36,6 @@ deriving Repr, BEq, Inhabited, TypeName
 
 -- def commandLineOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
 --   ("OPTIONS", commandLineOnlyOptions) :: otherOptions config
-
-def ConfigFile.ignored (_config : Config) (_args : List String) : IO Bool := do
-  match (<- IO.getEnv "IGNORE_DOT_LSPEC") with
-  | .some _ => return true
-  | .none =>
-    -- TODO: parseCommandLineOptions
-    return false
 
 def readConfigFile (path : System.FilePath) : IO (Option ConfigFile) := do
   unless (<- path.pathExists) do
@@ -104,26 +99,65 @@ def readConfigFiles : IO (List ConfigFile) := do
 
 def parseOptions (cmd : Cli.Cmd) (args : List String) (config : Config) : EIO (ExitCode × String) (List String × Config) := do
   let mut warnings : List String := []
-  let mut config := config
-  match ((<- cmd.process' args |>.toBaseIO) : Except String Cli.Parsed) with
+  let mut config : Config := config
+  match <- cmd.process' args |>.toBaseIO with
   | .ok parsed =>
     if parsed.hasFlag "help" then
       throw (.Success, cmd.help)
-    if parsed.cmd.meta.hasVersion ∧ parsed.hasFlag "version" then
+
+    if parsed.cmd.meta.hasVersion && parsed.hasFlag "version" then
       throw (.Success, cmd.meta.version!)
 
     if parsed.hasFlag "ignore-dot-lspec" then
       config := { config with ignoreConfigFile := true }
 
-    if let .some failOn := parsed.flag? "fail-on" then
-      config := { config with failOn := Std.HashSet.ofArray $ failOn.as! (Array FailOn) }
+    if let .some flag := parsed.flag? "match" then
+      for pattern in flag.as! (Array String) do
+        config := config.addMatch pattern
+
+    if let .some flag := parsed.flag? "skip" then
+      for pattern in flag.as! (Array String) do
+        config := config.addSkip pattern
+
+    if parsed.hasFlag "dry-run" then
+      config := { config with dryRun := true }
+
+    if parsed.hasFlag "focused-only" then
+      config := { config with focusedOnly := true }
+
+    if let .some flag := parsed.flag? "fail-on" then
+      config := { config with failOn := config.failOn.insertMany $ flag.as! (Array FailOn) }
+
+    if parsed.hasFlag "strict" then
+      config := { config with failOn := config.failOn.insertMany [FailOn.focused, FailOn.pending] }
+
+    if parsed.hasFlag "fail-fast" then
+      config := { config with failFast := true }
+
+    if parsed.hasFlag "randomize" then
+      config := { config with randomize := true }
+
+    if parsed.hasFlag "rerun" then
+      config := { config with rerun := true }
+
+    if let .some flag := parsed.flag? "failure-report" then
+      config := { config with failureReport? := .some $ flag.as! System.FilePath }
+
+    if parsed.hasFlag "rerun-all-on-success" then
+      config := { config with rerunAllOnSuccess := true }
+
+    if let .some flag := parsed.flag? "jobs" then
+      config := { config with concurrentJobs? := .some $ flag.as! Nat }
+
+    if let .some flag := parsed.flag? "seed" then
+      config := { config with seed? := .some $ flag.as! Seed }
 
     -- IO.println config.failOn.toArray
-    if let .some format := parsed.flag? "format" then
-      let format := format.as! String
-      let formatter? := config.availableFormatters.lookup format
+    if let .some flag := parsed.flag? "format" then
+      let name := flag.as! String
+      let formatter? := config.availableFormatters.lookup name
       if formatter?.isNone then
-        warnings := warnings.concat s!"unknown format: {format}"
+        warnings := warnings.concat s!"unknown format: {name}"
       config := { config with format? := (·.toFormat) <$> formatter? }
 
     pure (warnings, config)

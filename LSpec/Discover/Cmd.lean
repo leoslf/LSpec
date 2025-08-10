@@ -18,10 +18,8 @@ def parseConfig (parsed : Parsed) : IO DiscoverConfig := do
 
 def runDiscoverCmd (p : Parsed) : IO UInt32 := do
   let source <- IO.FS.realPath $ p.flag! "source" |>.as! System.FilePath
-  IO.eprintln s!"source: {source}"
   let destination? := p.flag? "destination" >>= (·.as? System.FilePath)
-  let current := p.flag? "current" >>= (·.as? System.FilePath) |>.getD (<- IO.appDir) 
-  IO.eprintln s!"current: {current}"
+  let current := p.flag? "current" >>= (·.as? System.FilePath) |>.getD (<- IO.appDir)
   let config <- parseConfig p
   let specs <- findSpecs source
   let write : String -> IO Unit :=

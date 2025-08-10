@@ -99,7 +99,7 @@ def shouldAbort : EvalM Bool := do
   ref.get
 
 def addResult (path : Path) (item : Format.Item) : EvalM Unit := do
-  (<- reads (·.results)).modify (dbgTraceVal (path, item) :: ·)
+  (<- reads (·.results)).modify ((path, item) :: ·)
 
 def _root_.LSpec.Core.Format.Event.emit (event : Format.Event) : EvalM Unit := do
   let format <- reads (·.config.format)
@@ -171,15 +171,9 @@ def sequenceActions : List (EvalM Unit) -> EvalM Unit :=
   go
  where
   go : List (EvalM Unit) -> EvalM Unit
-  | [] => do
-    IO.eprintln! "sequenceActions.go []"
-    (<- IO.getStderr).flush
-    pure ()
+  | [] => pure ()
   | action :: actions => do
-    IO.eprintln! s!"sequenceActions.go ({action} :: {actions})"
-    (<- IO.getStderr).flush
     action
-    (<- IO.getStderr).flush
     if not (<- shouldAbort) then
       go actions
 
@@ -219,8 +213,6 @@ def reportItemStarted (path : Path) : EvalM Unit :=
   Format.Event.ItemStarted path |>.emit
 
 def reportItemDone (path : Path) (item : Format.Item) : EvalM Unit := do
-  IO.eprintln! s!"reportItemDone: (path: {path}, item: {item})"
-  (<- IO.getStderr).flush
   addResult path item
   Format.Event.ItemDone path item |>.emit
 
@@ -252,14 +244,10 @@ def reportItem (path : Path) (location? : Option Location) (action : EvalM (Cloc
   reportResult path location? =<< action
 
 def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
-  try
-    sequenceActions $ specs.flatMap foldSpec
-  finally
-    IO.eprintln! "after eval"
+  sequenceActions $ specs.flatMap foldSpec
  where
   evalItem (groups : List String) (item : RunningItem EvalM) : EvalM Unit := do
     let path : Path := (groups, item.description)
-    IO.eprintln! s!"path: {path}"
     reportItem path item.location? $ item.action path
 
   runCleanup (_ : Option (String × Location)) (_ : List String) : Unit -> EvalM Unit :=
@@ -276,7 +264,6 @@ def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
 def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Format.Item)) := do
   withJobQueue config.concurrentJobs λqueue => do
     withTimer 0.05 λtimer => do
-      IO.eprintln! s!"runFormatter {specs}"
       let env <- Env.new config
       let runningSpecs_ <- queue.enqueueItems specs
       let applyReportProgress (item : RunningItem_ IO) : RunningItem IO :=
@@ -290,9 +277,7 @@ def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Form
       format .Started
 
       try
-        IO.eprintln! "ReaderT.run"
         ReaderT.run (eval runningSpecs) env
-        IO.eprintln! "after ReaderT.run"
       catch
       | e => do
         formatDone
@@ -301,7 +286,6 @@ def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Form
         formatDone
 
       let results <- getResults
-      IO.eprintln! s!"results: {results}"
       return results
  where
   format := config.format

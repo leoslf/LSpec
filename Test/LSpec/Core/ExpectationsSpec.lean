@@ -5,7 +5,7 @@ open LSpec.Core
 namespace Test.LSpec.Core.ExpectationsSpec
 
 def expectationFailed (reason : Example.Result.FailureReason) (failure : Failure) : Bool :=
-  dbgTraceVal failure.reason == dbgTraceVal reason && (setColumn <$> failure.location?) == (setColumn <$> location?)
+  failure.reason == reason && (setColumn <$> failure.location?) == (setColumn <$> location?)
  where
   location? : Option Location := .none
     -- match List.reverse callStack with

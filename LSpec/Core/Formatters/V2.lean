@@ -189,7 +189,7 @@ def defaultFailedFormatter : FormatM Unit := do
       | .none => do
         let chunks? <-
           if <- useDiff then
-            timeout threshold $ evaluate $ lineDiff (<- diffContext?) expected actual 
+            timeout threshold $ evaluate $ lineDiff (<- diffContext?) expected actual
           else
             pure .none
         match chunks? with
@@ -197,7 +197,7 @@ def defaultFailedFormatter : FormatM Unit := do
           writeDiff chunks extraChunk missingChunk
         | .none => do
           writeDiff [.first (splitLines expected), .second (splitLines actual)] write write
-      
+
     | .Canceled => withFailColor $ indent "canceled"
     | .Error info e => do
       info.forM indent
@@ -209,11 +209,11 @@ def defaultFailedFormatter : FormatM Unit := do
 
 def pluralize : (n : Nat) -> (s : String) -> String
 | 1, s => s!"1 {s}"
-| n, s => s!"n {s}s"
+| n, s => s!"{n} {s}s"
 
 def defaultFooter : FormatM Unit := do
   writeLine =<< (· ++ ·)
-    <$> (printf "Finished in %1.4f seconds" <$> getRealTime)
+    <$> ((λseconds => printf "Finished in %1.4f seconds" (seconds : Float)) <$> getRealTime)
     <*> pure ((<- getCPUTime?).elim "" (printf ", used %1.4f seconds of CPU time" ·))
 
   let fails <- getFailCount
@@ -245,12 +245,16 @@ def specdoc : Formatter :=
   {
     silent with
     started := do
+      -- withDebugColor $ writeLine "V2.specdoc.started"
       writeLine ""
     groupStarted := λ(nesting, name) => do
+      -- withDebugColor $ writeLine "V2.specdoc.groupStarted"
       writeLine $ indentationFor nesting ++ name
     progress := λ_ progress => do
+      -- withDebugColor $ writeLine "V2.specdoc.progress"
       writeTransient $ formatProgress progress
     itemDone := λ(nesting, requirement) item => do
+      -- withDebugColor $ writeLine "V2.specdoc.itemDone"
       let duration := item.duration
       let info := item.info
       match item.result with
@@ -265,7 +269,9 @@ def specdoc : Formatter :=
         withFailColor $ do
           let n <- getFailCount
           writeResult nesting (requirement ++ " FAILED [{n}]") duration info
-    done := defaultFailedFormatter *> defaultFooter
+    done := do
+      -- withDebugColor $ writeLine "specdoc.done"
+      defaultFailedFormatter *> defaultFooter
   }
  where
   indentationFor (nesting : List String) := "".intercalate $ List.replicate (nesting.length * 2) " "
@@ -292,12 +298,15 @@ def specdoc : Formatter :=
 
 def failed_examples : Formatter := {
   silent with
-  done := defaultFailedFormatter *> defaultFooter
+  done := do
+    -- withDebugColor $ writeLine "V2.failed_examples.done"
+    defaultFailedFormatter *> defaultFooter
 }
 
 def progress : Formatter := {
   failed_examples with
   itemDone := λ_ item => do
+    -- withDebugColor $ writeLine "V2.progress.itemDone"
     match item.result with
     | .Success => withSuccessColor $ write "."
     | .Pending _ _ => withPendingColor $ write "."

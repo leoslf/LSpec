@@ -7,7 +7,7 @@ open LSpec.Core.Clock (Seconds)
 
 def worker (delay : Seconds) (ref : IO.Ref Bool) : BaseIO Unit := do
   while not (<- IO.checkCanceled) do
-    dbgTrace s!"delay: {delay}" pure
+    -- dbgTraceM s!"delay: {delay}"
     delay.sleep
     ref.set true
   ref.set false
@@ -17,7 +17,7 @@ def withTimer [Monad m] [MonadFinally m] [MonadLift IO m] (delay : Seconds) (act
   let before : m (Task Unit) := BaseIO.asTask do
     worker delay ref
   let after (task : Task Unit) : m Unit := do
-    IO.eprintln! "cancelling task"
+    -- dbgTraceM! "cancelling task"
     IO.cancel task
 
   IO.bracket before after λ(task : Task Unit) => do

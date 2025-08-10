@@ -7,6 +7,8 @@ open Cli
 
 namespace LSpec.Core.Runner
 
+open LSpec.Core.Config
+
 set_option diagnostics true
 
 -- def mkLoadConfig (lakeOptions : LakeOptions) : IO LoadConfig := do
@@ -40,22 +42,6 @@ set_option diagnostics true
 --
 -- def package : IO Package := CliM.run' $ loadPackage `LSpec
 
-instance : ParseableType FailOn where
-  name := "FailOn"
-  parse?
-  | "empty" => .some .empty
-  | "focused" => .some .focused
-  | "pending" => .some .pending
-  | "empty-description" => .some .emptyDescription
-  | _ => .none
-
-inductive Formatter where
-| checks : Formatter
-| specdoc : Formatter
-| progress : Formatter
-| failedExamples : Formatter
-| silent : Formatter
-
 def version : String := "2.1.0"
 def description : String := ""
 
@@ -65,8 +51,8 @@ def cmd : Cmd := `[Cli|
 
   FLAGS:
     "ignore-dot-lspec" | IGNORE_DOT_LSPEC;  "do not read options from ~/.lspec and .lspec"
-    m, "match";                             "only run examples that match given PATTERN"
-    skip;                                   "skip examples that match given PATTERN"
+    m, "match" : Array String;              "only run examples that match given PATTERN"
+    skip : Array String;                    "skip examples that match given PATTERN"
     "dry-run";                              "pretend that everything passed; don't verify anything"
     "focused-only";                         "do not run anything, unless there are focused spec items"
     "fail-on" : Array FailOn;               "empty: fail if all spec items have been filtered" ++
@@ -76,19 +62,20 @@ def cmd : Cmd := `[Cli|
     strict;                                 "same as --fail-on=focused,pending"
     "fail-fast";                            "abort on first failure"
     "randomize";                            "randomize execution order"
-    r, rerun;                               "rerun all examples that failed in the " ++
-                                            "previous test run (only works in" ++
-                                            "combination with --failure-report)"
-    "failure-report" : System.FilePath;     "read/write a failure report for use with --rerun"
+    r, rerun;                               "rerun all examples that failed in the previous test run " ++
+                                            "(only works in combination with --failure-report)"
+    "failure-report" | LSPEC_FAILURES : System.FilePath;     "read/write a failure report for use with --rerun"
     "rerun-all-on-success";                 "run the whole test suite after a previously " ++
                                             "failing rerun succeeds for the first time " ++
                                             "(only works in combination with --rerun)"
     j, jobs : Nat;                          "run at most N parallelizable tests simultaneously (default: number of available processors)"
     seed : Seed;                            "used seed for --randomize and QuickCheck properties"
-    f, format : String;                   "use a custom formatter; this can be one of checks, specdoc, progress, failed-examples or silent"
+    f, format | LSPEC_FORMAT : String;                     "use a custom formatter; this can be one of checks, specdoc, progress, failed-examples or silent"
 
   EXTENSIONS:
     envVars;
-    defaultValues! #[("format", "progress")]
+    defaultValues! #[
+      ("format", "progress"),
+    ]
 ]
 

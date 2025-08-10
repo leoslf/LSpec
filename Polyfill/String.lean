@@ -1,7 +1,23 @@
+import Polyfill.Cons
 import Polyfill.List
+
+def Char.isAscii (c : Char) : Bool :=
+  c < '\x80'
+
+def Char.isC0 (c : Char) : Bool :=
+  c <= '\x1f' || c == '\x7f'
+
+def Char.isC1 (c : Char) : Bool :=
+  c >= '\x80' && c <= '\x9f'
+
+def Char.isControl (c : Char) : Bool :=
+  c.isC0 || c.isC1
 
 def String.words : String -> List String :=
   String.splitOn (sep := " ")
+
+def List.unwords (words : List String) : String :=
+  " ".intercalate words
 
 def String.reverse : String -> String :=
   List.asString ∘ List.reverse ∘ String.toList
@@ -83,3 +99,8 @@ def List.unlines : List String -> String :=
   "\n".intercalate
 
 export List (unlines)
+
+def String.toTitle : String -> String
+| ⟨[]⟩ => ""
+| ⟨c :: cs⟩ => c.toUpper :: (cs : String).toLower
+

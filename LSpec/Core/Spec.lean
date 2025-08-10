@@ -19,14 +19,15 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
   let colorMode <- colorOutputSupported config.colorMode $ stdout.supportsANSI
   let outputUnicode <- unicodeOutputSupported config.unicodeMode stdout
   let filteredSpec := specToEvalForest seed config spec
-  let filteredCount : Nat := Forest.size filteredSpec
-  let specCount : Nat := Forest.size spec
-  IO.eprintln! s!"filteredCount: {filteredCount}"
+  let filteredCount : Nat := Forest.leafs filteredSpec
+  let specCount : Nat := Forest.leafs spec
+  -- dbgTraceM s!"filteredCount: {filteredCount}"
   if config.failOn.contains .empty && filteredCount == 0 then
     if specCount != 0 then
       die "all spec items have been filtered; failing due to --fail-on=empty"
+
   -- TODO
-  let concurrentJobs <- config.concurrentJobs.elim getDefaultConcurrentJobs pure
+  let concurrentJobs <- config.concurrentJobs?.elim getDefaultConcurrentJobs pure
   let stdout <- IO.getStdout
   let results : SpecResult <- Functor.map toSpecResult ∘ withHiddenCursor colorMode.progressReporting stdout $ do
     let formatConfig : Format.Config := {
@@ -55,7 +56,7 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
       expertMode := config.expertMode
     }
     -- FIXME: do we get rid of the V1.Formatter
-    let formatter := config.getFormatter (formatter? := .none) |>.getD $ V2.Formatter.toFormat V2.checks
+    let formatter := config.getFormatter (formatterV1? := .none) |>.getD $ V2.Formatter.toFormat V2.checks
     let format <- config.printSlowItems.elim id printSlowSpecItems <$> formatter formatConfig
     let evalConfig : Eval.Config := {
       format
@@ -63,8 +64,8 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
       failFast := config.failFast
       colorMode := if colorMode.shouldUseColor then .Enabled else .Disabled
     }
-    IO.eprintln! s!"evalConfig: {evalConfig}"
-    IO.eprintln! s!"filteredSpec: {filteredSpec}"
+    -- dbgTraceM s!"evalConfig: {evalConfig}"
+    -- dbgTraceM s!"filteredSpec: {filteredSpec}"
     Eval.runFormatter evalConfig filteredSpec
 
   return results
@@ -87,14 +88,14 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
   | (config, forest) =>
     let args <- ArgsT.getArgs
     let config <- readConfig cmd config args
-    IO.eprintln s!"{config}"
+    -- dbgTraceM s!"{config}"
     let oldFailureReport? <- FailureReport.readOnRerun config
 
     let normalMode := do
-      IO.eprintln! "normalMode"
+      -- dbgTraceM "normalMode"
       let results <- ArgsT.withArgs [] do
         SpecForest.runWithOldFailureReport oldFailureReport? forest config
-      IO.eprintln! "after SpecForest.runWithOldFailureReport"
+      -- dbgTraceM "after SpecForest.runWithOldFailureReport"
       return results
 
     let rerunMode := do
@@ -105,18 +106,18 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
         return result
 
     if config.rerunAllOnSuccess then
-      IO.eprintln "config.rerunAllOnSuccess"
+      -- dbgTraceM "config.rerunAllOnSuccess"
       rerunMode
     else
       normalMode
 
 def Summary.evaluate (summary : Summary) : ArgsT IO Unit := do
-  IO.eprintln! summary
+  -- IO.eprintln! summary
   unless summary.isSuccess do
     die "summary is not success"
 
 def SpecResult.evaluate (result : SpecResult) : ArgsT IO Unit := do
-  IO.eprintln! result
+  -- IO.eprintln! result
   unless result.success do
     die "result is not success"
 

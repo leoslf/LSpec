@@ -20,7 +20,7 @@ instance : ToString FailureReport where
 def read? [Inhabited a] (_ : String) : a := default
 
 def FailureReport.write (config : Config) (report : FailureReport) : IO Unit :=
-  match config.failureReport with
+  match config.failureReport? with
   | .some file => IO.FS.writeFile file $ toString report
   | .none => do
     try
@@ -29,7 +29,8 @@ def FailureReport.write (config : Config) (report : FailureReport) : IO Unit :=
     | error => IO.eprintln s!"WARNING: Could not write environment variable LSPEC_FAILURES ({error})"
 
 def FailureReport.read (config : Config) : IO (Option FailureReport) :=
-  match config.failureReport with
+  match config.failureReport? with
+  | .none => pure .none
   | .some file => do
     unless (<- file.pathExists) do
       return .none
@@ -37,11 +38,11 @@ def FailureReport.read (config : Config) : IO (Option FailureReport) :=
     if report.isNone then
       IO.eprintln s!"WARNING: Could not read failure report from file {file}!"
     return report
-  | .none => do
-    let report <- (· >>= read?) <$> IO.getEnv "LSPEC_FAILURES"
-    if report.isNone then
-      IO.eprintln "WARNING: Could not read environment variable LSPEC_FAILURES; `--rerun' is ignored!"
-    return report
+  -- | .none => do
+  --   let report <- (· >>= read?) <$> IO.getEnv "LSPEC_FAILURES"
+  --   if report.isNone then
+  --     IO.eprintln "WARNING: Could not read environment variable LSPEC_FAILURES; `--rerun' is ignored!"
+  --   return report
 
 def FailureReport.readOnRerun (config : Config) : IO (Option FailureReport) :=
   if config.rerun then

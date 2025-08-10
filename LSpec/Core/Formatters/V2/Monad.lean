@@ -161,6 +161,8 @@ def getCPUTime? : FormatM (Option Seconds) := do
 def getRealTime : FormatM Seconds := do
   let t1 <- Seconds.getMonotonicTime
   let t0 <- gets FormatterState.startTime
+  -- dbgTraceM s!"t0: {t0}, t1: {t1}"
+  -- dbgTraceM s!"real time: {reprPrec (t1 - t0) 10}"
   return t1 - t0
 
 def printTimes : FormatM Bool :=
@@ -192,6 +194,9 @@ def withInfoColor : FormatM a -> FormatM a :=
 
 def withFailColor : FormatM a -> FormatM a :=
   withColor (.SetColor .Foreground .Dull .Red) "lspec-failure"
+
+def withDebugColor : FormatM a -> FormatM a :=
+  withColor (.SetColor .Background .Vivid .Blue) "lspec.debug"
 
 def indentBy (indentation : String) (message : String) : FormatM Unit := do
   message.lines.forM λline => do

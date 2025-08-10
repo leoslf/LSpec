@@ -145,7 +145,8 @@ def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.E
     else
       id
   debug {a} [ToString a] (format : a -> String) (value : a) : a :=
-    dbgTrace (format value) $ λ() => value
+    value
+    -- dbgTrace (format value) $ λ() => value
 
 inductive ProgressReporting where
 | Disabled : ProgressReporting
@@ -194,11 +195,9 @@ def unicodeOutputSupported (mode : UnicodeMode) (stream : IO.FS.Stream) : IO Boo
   | .always => pure true
 
 def withHiddenCursor [Monad m] [MonadFinally m] [MonadLift IO m] (progress : ProgressReporting) (stream : IO.FS.Stream) : m a -> m a :=
-  -- FIXME
-  id
-  -- match progress with
-  -- | .Disabled => id
-  -- | .Enabled => IO.bracket_ stream.hideCursor stream.showCursor
+  match progress with
+  | .Disabled => id
+  | .Enabled => IO.bracket_ stream.hideCursor stream.showCursor
 
 def getDefaultConcurrentJobs : IO Nat :=
   IO.nproc

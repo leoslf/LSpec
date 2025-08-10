@@ -9,36 +9,13 @@ import LSpec.Core.Annotations
 import LSpec.Core.DiffContext
 import LSpec.Core.Format
 import LSpec.Core.Formatters
+import LSpec.Core.Config.Options
 
 namespace LSpec.Core
 
 open GetOpt
 open LSpec.Core (Seed)
 open LSpec.Core.Formatters
-
-namespace Config
-
-inductive ColorMode where
-| auto : ColorMode
-| never : ColorMode
-| always : ColorMode
-deriving Repr, DecidableEq
-
-instance : Inhabited ColorMode where
-  default := .auto
-
-inductive UnicodeMode where
-| auto : UnicodeMode
-| never : UnicodeMode
-| always : UnicodeMode
-deriving Repr, DecidableEq
-
-instance : Inhabited UnicodeMode where
-  default := .auto
-
-end Config
-
-open Config
 
 structure SlimCheckConfig where
   seed? : Option Seed
@@ -51,15 +28,6 @@ deriving Repr, Inhabited, DecidableEq
 #check Format
 #check Format.Config
 
--- #check Path
-
-inductive FailOn where
-| empty : FailOn
-| focused : FailOn
-| pending : FailOn
-| emptyDescription : FailOn
-deriving Repr, BEq, Hashable
-
 #synth Repr (Path -> Bool)
 #synth Repr (Option (Path -> Bool))
 
@@ -68,26 +36,30 @@ structure Config where
   ignoreConfigFile : Bool := false
   dryRun : Bool := false
   focusedOnly : Bool := false
-  failOn : Std.HashSet FailOn := {}
+  failOn : Std.HashSet Config.FailOn := {}
   printSlowItems : Option Nat := .none
   printCpuTime : Bool := false
   failFast : Bool := false
   randomize : Bool := false
   seed? : Option Seed := .none
-  failureReport : Option System.FilePath := .none
+  failureReport? : Option System.FilePath := .none
   rerun : Bool := false
   rerunAllOnSuccess : Bool := false
-  /--
-    A predicate that is used to filter the spec before it is run.
-    Only examples that satisfy the predicate are run.
-  -/
+
+  -- match_patterns : List String := []
+  -- skip_patterns : List String := []
+
+  -- /--
+  --   A predicate that is used to filter the spec before it is run.
+  --   Only examples that satisfy the predicate are run.
+  -- -/
   filter? : Option (Path -> Bool) := .none
   skip? : Option (Path -> Bool) := .none
 
   slimCheck : SlimCheckConfig := default
   smallCheckDepth : Option Nat := .none
-  colorMode : ColorMode := default
-  unicodeMode : UnicodeMode := default
+  colorMode : Config.ColorMode := default
+  unicodeMode : Config.UnicodeMode := default
   diff : Bool := false
   diffContext? : Option DiffContext := .none
   externalDiff? : Option (Option Int -> String -> String -> IO Unit) := .none
@@ -97,11 +69,12 @@ structure Config where
   times : Bool := false
   expertMode : Bool := false
   availableFormatters : List (String × V2.Formatter)
+  -- NOTE: now it is a derived field from formatter?
   format? : Option (Format.Config -> IO Format) := .none
   -- FIXME: universe-level problems
-  -- formatter? : Option V1.Formatter := .none
+  -- formatterV1? : Option V1.Formatter := .none
   htmlOutput : Bool := false
-  concurrentJobs : Option Nat := .none
+  concurrentJobs? : Option Nat := .none
   annotations : Annotations := {}
 deriving Inhabited, Repr
 
@@ -133,8 +106,8 @@ instance : Inhabited Config where
 
 -- set_option diagnostics true
 
-def Config.getFormatter (config : Config) (formatter? : Option V1.Formatter := .none) : Option (Format.Config -> IO Format) :=
-  config.format? <|> formatter?.map (·.toFormat)
+def Config.getFormatter (config : Config) (formatterV1? : Option V1.Formatter := .none) : Option (Format.Config -> IO Format) :=
+  config.format? <|> formatterV1?.map (·.toFormat)
 
 def Config.getSeed (config : Config) : Option Seed :=
   config.seed? <|> config.slimCheck.seed?
@@ -150,13 +123,24 @@ def Config.ensureSeed (config : Config) : IO (Seed × Config) := do
 abbrev Filter := Option (Path -> Bool)
 
 def Filter.or : Filter -> Filter -> Filter
-| .some f, .some g => .some $ λ path => f path ∨ g path
+| .some f, .some g => .some $ λpath => f path || g path
 | f, g => f <|> g
 
-def addMatch (pattern : String) (config : Config) : Config :=
+-- def Filter.of (patterns : List String) : Filter :=
+--   patterns
+--     |>.map (Option.some ∘ Path.filterPredicate)
+--     |>.foldl Filter.or Option.none
+-- 
+-- def Config.filter? (config : Config) : Filter :=
+--   Filter.of config.match_patterns
+-- 
+-- def Config.skip? (config : Config) : Filter :=
+--   Filter.of config.skip_patterns
+
+def Config.addMatch (pattern : String) (config : Config) : Config :=
   { config with filter? := Option.some (Path.filterPredicate pattern) |>.or config.filter? }
 
-def addSkip (pattern : String) (config : Config) : Config :=
+def Config.addSkip (pattern : String) (config : Config) : Config :=
   { config with skip? := Option.some (Path.filterPredicate pattern) |>.or config.skip? }
 
 -- def argument {Config} (name : String) (parser : String -> Option a) (setter : a -> Config -> Config) : Declarative.Types.Setter Config :=
