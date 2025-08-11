@@ -34,6 +34,7 @@ name = "Test"
 
 [[lean_exe]]
 name = "Test.Main"
+buildType = "debug"
 
 [[require]]
 name = "mathlib"
@@ -48,7 +49,7 @@ rev = "286f67902bbb5b8cbb1550c471feec44121150de"
 [[require]]
 name = "Printf"
 git = "https://github.com/leoslf/printf.lean"
-rev = "eb65b3563d92e84a54f8fe97c3cc0615700b665e"
+rev = "0c13a4baf6e23a9a94742211eb11b257f036a750"
 
 [[require]]
 name = "Free"
