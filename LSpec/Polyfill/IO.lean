@@ -1,4 +1,4 @@
-import Polyfill.Encoding
+import LSpec.Polyfill.Encoding
 
 namespace IO
 

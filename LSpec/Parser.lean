@@ -1,4 +1,4 @@
-import Polyfill.Alternative
+import LSpec.Polyfill.Alternative
 
 namespace LSpec
 

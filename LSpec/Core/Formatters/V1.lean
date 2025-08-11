@@ -1,4 +1,4 @@
-import Console.ANSI
+import LSpec.Console.ANSI
 
 import LSpec.Core.Example
 import LSpec.Core.Format

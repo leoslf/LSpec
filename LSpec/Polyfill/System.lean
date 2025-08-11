@@ -1,7 +1,7 @@
 -- FIXME:
 import Std.Internal.Async.System
 
-import Polyfill.IO
+import LSpec.Polyfill.IO
 
 namespace System
 

@@ -1,5 +1,5 @@
-import Polyfill.Cons
-import Polyfill.List
+import LSpec.Polyfill.Cons
+import LSpec.Polyfill.List
 
 def Char.isAscii (c : Char) : Bool :=
   c < '\x80'

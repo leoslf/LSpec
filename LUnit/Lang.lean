@@ -1,15 +1,15 @@
--- import Polyfill.Location
--- import Polyfill.Exception
--- 
+-- import LSpec.Polyfill.Location
+-- import LSpec.Polyfill.Exception
+--
 -- namespace LUnit
--- 
+--
 -- inductive Failure.Reason where
 -- | Reason (reason : String) : Failure.Reason
 -- | ExpectedButGot (preface? : Option String) (expected : String) (actual : String) : Failure.Reason
 -- | Error (info? : Option String) (exception : Exception) : Failure.Reason
 -- | Canceled : Failure.Reason
 -- deriving Repr, BEq
--- 
+--
 -- instance : ToString Failure.Reason where
 --   toString
 --   | .Reason reason => reason
@@ -17,32 +17,32 @@
 --     "\n".intercalate $ [preface?].reduceOption ++ [s!"expected: {expected}", s!" but got: {actual}"]
 --   | .Error info? exception => s!"uncaught exception: {exception}" ++ info?.elim "" (", " ++ ·)
 --   | .Canceled => "canceled"
--- 
+--
 -- def location? : Option Location :=
 --   -- FIXME
 --   .none
--- 
+--
 -- structure Failure where
 --   mk ::
 --   location? : Option Location
 --   reason : Failure.Reason
 -- deriving Repr, BEq
--- 
+--
 -- abbrev AssertionM := EIO Failure
 -- notation:max "Assertion" => (AssertionM Unit)
--- 
+--
 -- #check Assertion
--- 
+--
 -- instance : MonadLift IO AssertionM where
 --   monadLift := EStateM.adaptExcept λe =>
 --     -- FIXME: extract location from IO.Error
 --     let location? : Option Location := .none
 --     let reason : Failure.Reason := .Error .none $ Exception.of e
 --     Failure.mk location? reason
--- 
+--
 -- def assertFailure (message : String) : AssertionM Unit := do
 --   throw $ Failure.mk location? $ .Reason message
--- 
+--
 -- def assertEqual [Repr a] [BEq a] (preface : String) (expected : a) (actual : a) : AssertionM Unit := do
 --   unless actual == expected do
 --     throw $ Failure.mk location? $ .ExpectedButGot preface? expected' actual'
@@ -50,19 +50,19 @@
 --   preface? : Option String := Option.some preface |>.filter (not ∘ String.isEmpty)
 --   expected' := reprStr expected
 --   actual' := reprStr actual
--- 
+--
 -- -- inductive Result where
 -- -- | Success : Result
 -- -- | Failure (location? : Option Location) (reason : String) : Result
 -- -- | Error (location? : Option Location) (reason : String) : Result
 -- -- deriving Repr, BEq
--- 
+--
 -- -- abbrev LUnitM := EIO Result
 -- -- abbrev LUnit := LUnitM Unit
--- 
+--
 -- -- def Assertion.run (assertion : Assertion) : LUnitM Result := do
 -- --   (assertion *> pure .Success).adaptExcept λ
 -- --     | ({ location?, reason } : Failure) =>
 -- --       Result.Failure location? $ toString reason
--- 
+--
 -- -- abbrev performTestCase := Assertion.run

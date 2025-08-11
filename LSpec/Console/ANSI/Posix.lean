@@ -1,5 +1,5 @@
-import Polyfill.String
-import Console.ANSI.Common
+import LSpec.Polyfill.String
+import LSpec.Console.ANSI.Common
 
 namespace Console.ANSI
 

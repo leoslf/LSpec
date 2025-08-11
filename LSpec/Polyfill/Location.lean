@@ -1,4 +1,4 @@
-import Polyfill.CallStack
+import LSpec.Polyfill.CallStack
 
 structure Location where
   mk ::

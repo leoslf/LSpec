@@ -1,10 +1,7 @@
-import Polyfill
+import LSpec.GetOpt.Declarative.Types
+import LSpec.Polyfill
 
-import GetOpt.Declarative.Types
-
-namespace GetOpt.Declarative
-
-open GetOpt.Declarative
+namespace LSpec.GetOpt.Declarative
 
 structure InvalidValue where
   mk ::

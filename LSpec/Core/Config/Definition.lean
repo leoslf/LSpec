@@ -1,4 +1,4 @@
-import GetOpt.Declarative
+-- import GetOpt.Declarative
 
 import LSpec.Prelude
 
@@ -13,7 +13,7 @@ import LSpec.Core.Config.Options
 
 namespace LSpec.Core
 
-open GetOpt
+-- open GetOpt
 open LSpec.Core (Seed)
 open LSpec.Core.Formatters
 
@@ -130,10 +130,10 @@ def Filter.or : Filter -> Filter -> Filter
 --   patterns
 --     |>.map (Option.some ∘ Path.filterPredicate)
 --     |>.foldl Filter.or Option.none
--- 
+--
 -- def Config.filter? (config : Config) : Filter :=
 --   Filter.of config.match_patterns
--- 
+--
 -- def Config.skip? (config : Config) : Filter :=
 --   Filter.of config.skip_patterns
 
@@ -157,12 +157,12 @@ def Config.addSkip (pattern : String) (config : Config) : Config :=
 
 structure ExtensionOptions where
   mk ::
-  unExtensionOptions : List (String × List (Declarative.Types.Option' Config))
+  -- unExtensionOptions : List (String × List (Declarative.Types.Option' Config))
 deriving TypeName
 
 def getConfigAnnotation {a : Type u} [TypeName a] : Config -> Option a :=
   Annotations.getValue ∘ Config.annotations
 
-def getExtensionOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
-  getConfigAnnotation config |>.elim [] ExtensionOptions.unExtensionOptions
+-- def getExtensionOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
+--   getConfigAnnotation config |>.elim [] ExtensionOptions.unExtensionOptions
 

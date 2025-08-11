@@ -1,5 +1,5 @@
 -- import LSpec.Prelude
-import Polyfill.System
+import LSpec.Polyfill.System
 
 import LSpec.Core.Config
 

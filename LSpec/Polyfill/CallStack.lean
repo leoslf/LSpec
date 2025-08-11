@@ -1,4 +1,4 @@
-import Polyfill.IO
+import LSpec.Polyfill.IO
 
 namespace CallStack
 

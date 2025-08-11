@@ -1,6 +1,6 @@
 import Mathlib.Control.Traversable.Basic
 
-import Polyfill.String
+import LSpec.Polyfill.String
 
 namespace LSpec.Casing
 
