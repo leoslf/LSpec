@@ -172,7 +172,6 @@ def sequenceActions (actions : List (EvalM Unit)) : EvalM Unit := do
     if <- shouldAbort then
       dbgTraceM' "shouldAbort"
       return ()
-    dbgTraceM "action"
     action
 
 structure FoldTree (c : Type) (a : Type) (r : Type) where
