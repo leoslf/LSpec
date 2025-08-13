@@ -11,5 +11,8 @@ def dbgTraceWith [ToString β] (f : α -> β) (value : α) : α :=
 @[never_extract]
 def dbgTraceM' (s : String) : BaseIO Unit := do
   let tid <- IO.getTID
-  dbgTraceM s!"[tid: {tid}] {s}"
+  if debug then
+    dbgTraceM s!"[tid: {tid}] {s}"
+ where
+  debug := false
 
