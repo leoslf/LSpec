@@ -81,7 +81,7 @@ def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (semaphore : 
         dbgTraceM' "sending partial result"
         result.put $ Partial.Partial p
 
-      dbgTraceM "running action"
+      -- dbgTraceM "running action"
       action partialResult
     finally
       dbgTraceM' "sending done"
