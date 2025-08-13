@@ -34,11 +34,6 @@ name = "Test"
 name = "Test.Main"
 buildType = "debug"
 
-# [[require]]
-# name = "mathlib"
-# scope = "leanprover-community"
-# rev = "059a5bcfe2f022fdcc04b1f294252566da9c21a2"
-
 [[require]]
 name = "batteries"
 scope = "leanprover-community"

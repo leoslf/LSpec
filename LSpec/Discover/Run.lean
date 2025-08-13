@@ -169,7 +169,7 @@ def mkSpecModule (source : System.FilePath) (config : DiscoverConfig) (nodes : O
   driver :=
     match config.noMain with
     | false =>
-      "def main := ArgsT.run $ lspec spec"
+      "def main : (args : List String) -> IO Unit := ArgsT.run $ lspec spec"
       -- "def main : IO Unit := do\n  IO.println \"Hello World\""
     | true => ""
 
