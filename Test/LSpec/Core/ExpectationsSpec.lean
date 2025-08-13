@@ -29,3 +29,17 @@ def spec : Spec := do
 
     it "fails if value does not satisfies predicate" $ do
       ("foo" <shouldSatisfy> String.isEmpty) <shouldThrow> expectationFailed (.Reason "predicate failed on: \"foo\"")
+
+  describe "shouldSatisfy" $ do
+    it "succeeds if value satisfies predicate" $ do
+      "" <shouldSatisfy> String.isEmpty
+
+    it "fails if value does not satisfies predicate" $ do
+      ("foo" <shouldSatisfy> String.isEmpty) <shouldThrow> expectationFailed (.Reason "predicate failed on: \"foo\"")
+
+  describe "shouldSatisfy" $ do
+    it "succeeds if value satisfies predicate" $ do
+      "" <shouldSatisfy> String.isEmpty
+
+    it "fails if value does not satisfies predicate" $ do
+      ("foo" <shouldSatisfy> String.isEmpty) <shouldThrow> expectationFailed (.Reason "predicate failed on: \"foo\"")

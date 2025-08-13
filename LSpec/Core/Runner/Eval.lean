@@ -167,21 +167,13 @@ def applyCleanup (abortEarly : Example.Result -> Bool) : RunningForest (IO Unit)
     .NodeWithCleanup location? () $ applyCleanupAction abortEarly location? cleanup $ children.map go
   | .Leaf item => .Leaf item
 
-def sequenceActions : List (EvalM Unit) -> EvalM Unit :=
-  go
- where
-  go : List (EvalM Unit) -> EvalM Unit
-  | [] => pure ()
-  | action :: actions => do
-    dbgTraceM' "action"
-    action
-
+def sequenceActions (actions : List (EvalM Unit)) : EvalM Unit := do
+  for action in actions do
     if <- shouldAbort then
       dbgTraceM' "shouldAbort"
       return ()
-
-    go actions
-
+    dbgTraceM "action"
+    action
 
 structure FoldTree (c : Type) (a : Type) (r : Type) where
   onGroupStarted : Path -> r
