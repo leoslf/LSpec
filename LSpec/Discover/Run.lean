@@ -54,22 +54,17 @@ where
   spec := Substring.toString <$> s!"{file}".dropSuffix? "Spec.lean"
 
 def isFile (path : System.FilePath) : BaseIO Bool := do
-  match (<- path.metadata.toBaseIO) with
-  | .ok metadata => return metadata.type == IO.FS.FileType.file
-  | .error _ => return false
+  return (<- path.metadata.toBaseIO).elim (Function.const _ false) (·.type == IO.FS.FileType.file)
 
-def Hook.mk (files : Array IO.FS.DirEntry) : IO Hook :=
-  match files.find? (·.fileName == "SpecHook.hs") with
-  | .none => pure .WithoutHook
-  | .some file => do
-      if (<- isFile file.path |>.toIO) then
-        pure .WithHook
-      else
-        pure .WithoutHook
+def Hook.mk (directory : System.FilePath) (files : Array IO.FS.DirEntry) : BaseIO Hook := do
+  for file in files do
+    if file.path == (directory / "SpecHook.lean") && (<- isFile file.path) then
+      return .WithHook
+  return .WithoutHook
 
 partial def specForest (directory : System.FilePath) : IO (Option Forest) := do
   let files <- directory.readDir
-  let hook <- Hook.mk files
+  let hook <- Hook.mk directory files
   let forests <- Array.reduceOption <$> files.mapM toSpecTree
   pure $ Forest.ensure hook $ Array.toList $ forests.qsort ((Ordering.isLT ∘ ·) ∘ compareNaturallyBy Tree.sortKey)
  where

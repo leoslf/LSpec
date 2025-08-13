@@ -4,4 +4,4 @@ namespace SpecHook
 
 open LSpec.Core
 
-def hook := parallel
+def hook : Spec -> Spec := parallel
