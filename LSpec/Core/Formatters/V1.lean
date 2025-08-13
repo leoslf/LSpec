@@ -1,3 +1,5 @@
+import LSpec.Prelude
+
 import LSpec.Console.ANSI
 
 import LSpec.Core.Example
@@ -44,18 +46,19 @@ structure Formatter where
 deriving Inhabited
 
 #check Formatter
+#check Applicative FormatM
 
 def silent : Formatter := {
-  header := pass
-  exampleGroupStarted := λ_ _ => pass
-  exampleGroupDone := pass
-  exampleStarted := λ_ => pass
-  exampleProgress := λ_ _ => pass
-  exampleSucceeded := λ_ _ => pass
-  exampleFailed := λ_ _ _ => pass
-  examplePending := λ_ _ _ => pass
-  failed := pass
-  footer := pass
+  header := pass'
+  exampleGroupStarted := λ_ _ => pass'
+  exampleGroupDone := pass'
+  exampleStarted := λ_ => pass'
+  exampleProgress := λ_ _ => pass'
+  exampleSucceeded := λ_ _ => pass'
+  exampleFailed := λ_ _ _ => pass'
+  examplePending := λ_ _ _ => pass'
+  failed := pass'
+  footer := pass'
 }
 
 def Formatter.interpret (action : FormatM a) : V2.FormatM a :=

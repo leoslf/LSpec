@@ -1,11 +1,21 @@
+import Init.Data.Ord
 import LSpec.Prelude
 
 namespace LSpec.Discover
 
+universe u
+
+abbrev Lex (α : Type u) := α
+
+instance [Ord α] [Ord β] : Ord (Lex (α × β)) := lexOrd
+
+#synth Ord (Lex (Char × Char))
+#synth Ord (List (Lex (Char × Char)))
+
 inductive Chunk where
 | Numeric (n : Nat) (length : Nat) : Chunk
-| Textual (pairs : List (Char × Char)) : Chunk
-deriving Repr, Ord, DecidableEq
+| Textual (pairs : List (Lex (Char × Char))) : Chunk
+deriving Repr, Ord, BEq, DecidableEq
 
 abbrev NaturalSortKey := List Chunk
 
@@ -23,4 +33,4 @@ partial def naturalSortKey : String -> NaturalSortKey :=
       .Textual (str.map λc => (c.toLower, c)) :: chunks rest
 
 def compareNaturallyBy (f : a -> String × Nat) : a -> a -> Ordering :=
-  compareOn $ (Prod.first naturalSortKey) ∘ f
+  compareOn (β := Lex (NaturalSortKey × Nat)) $ (Prod.first naturalSortKey) ∘ f

@@ -2,7 +2,7 @@ import LSpec.Polyfill.Alternative
 
 namespace LSpec
 
-structure Parser s a where
+structure Parser (s : Type u) (a : Type u) where
   mk ::
   run : s -> Option (a × s)
 

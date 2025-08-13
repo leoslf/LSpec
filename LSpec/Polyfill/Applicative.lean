@@ -1,2 +1,2 @@
-def pass [Applicative m] : m Unit :=
+def pass' [Applicative m] : m Unit :=
   pure ()

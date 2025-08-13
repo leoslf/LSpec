@@ -1,10 +1,10 @@
-import Mathlib.Control.Traversable.Basic
-
 import LSpec.Polyfill.String
 
 namespace LSpec.Casing
 
-structure Identifier α where
+universe u
+
+structure Identifier (α) where
   mk ::
   unIdentifier : List α
 deriving Repr, BEq, DecidableEq, Inhabited, Nonempty
@@ -41,11 +41,8 @@ def Identifier.foldl (f : b -> a -> b) (initial : b) : Identifier a -> b
 def Identifier.foldr (f : a -> b -> b) (initial : b) : Identifier a -> b
 | ⟨words⟩ => words.foldr f initial
 
-def Identifier.traverse [Applicative m] (f : a -> m b) : Identifier a -> m (Identifier b)
-| ⟨words⟩ => Identifier.mk <$> words.traverse f
-
-instance : Traversable Identifier where
-  traverse := Identifier.traverse
+-- def Identifier.traverse [Applicative m] (f : a -> m b) : Identifier a -> m (Identifier b)
+-- | ⟨words⟩ => Identifier.mk <$> words.traverse f
 
 namespace Identifier
 

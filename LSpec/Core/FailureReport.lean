@@ -19,12 +19,15 @@ instance : ToString FailureReport where
 
 def read? [Inhabited a] (_ : String) : a := default
 
+@[extern "lean_uv_os_setenv"]
+opaque setEnv : String -> String -> IO Unit
+
 def FailureReport.write (config : Config) (report : FailureReport) : IO Unit :=
   match config.failureReport? with
   | .some file => IO.FS.writeFile file $ toString report
   | .none => do
     try
-      System.setEnv "LSPEC_FAILURES" $ toString report
+      setEnv "LSPEC_FAILURES" $ toString report
     catch
     | error => IO.eprintln s!"WARNING: Could not write environment variable LSPEC_FAILURES ({error})"
 

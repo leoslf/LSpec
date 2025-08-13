@@ -23,7 +23,7 @@ deriving Repr
 abbrev EvalTree := LSpec.Core.Tree (IO Unit) EvalItem
 abbrev EvalForest := List EvalTree
 
-structure Item a where
+structure Item (a) where
   description : String
   location? : Option Location
   action : a

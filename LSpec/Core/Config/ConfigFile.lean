@@ -37,6 +37,9 @@ deriving Repr, BEq, Inhabited, TypeName
 -- def commandLineOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
 --   ("OPTIONS", commandLineOnlyOptions) :: otherOptions config
 
+@[extern "lean_uv_os_homedir"]
+opaque getHomeDir : IO System.FilePath
+
 def readConfigFile (path : System.FilePath) : IO (Option ConfigFile) := do
   unless (<- path.pathExists) do
     return .none
@@ -44,7 +47,7 @@ def readConfigFile (path : System.FilePath) : IO (Option ConfigFile) := do
   return (.some $ ConfigFile.mk path content.unescapeArgs)
 
 def readGlobalConfigFile : IO (Option ConfigFile) := do
-  let home <- System.getHomeDir
+  let home <- getHomeDir
   readConfigFile $ home / ".lspec"
 
 def readLocalConfigFile : IO (Option ConfigFile) := do

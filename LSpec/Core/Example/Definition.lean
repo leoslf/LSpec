@@ -27,7 +27,7 @@ end Example
 
 open Example
 
-class Example e where
+class Example (e : Type u) where
   Arg : Type
   evaluate (example_ : e) (params : Params) (hook : Hook Arg) (progress : ProgressCallback) : ExpectationM Result
 

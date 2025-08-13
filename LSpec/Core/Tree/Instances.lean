@@ -41,14 +41,14 @@ def Tree.bimap (g : a -> b) (f : c -> d) : (self : Tree a c) -> Tree b d :=
   | .Leaf item =>
     .Leaf $ f item
 
-instance : Bifunctor Tree where
-  bimap := Tree.bimap
+-- instance : Bifunctor Tree where
+--   bimap := Tree.bimap
 
 def Forest.bimap (g : a -> b) (f : c -> d) : Forest a c -> Forest b d :=
   List.map $ Tree.bimap g f
 
-instance : Bifunctor Forest where
-  bimap := Forest.bimap
+-- instance : Bifunctor Forest where
+--   bimap := Forest.bimap
 
 end Bifunctor
 

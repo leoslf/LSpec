@@ -8,7 +8,7 @@ namespace LSpec.Discover
 
 open Cli
 
-set_option linter.dupNamespace false
+-- set_option linter.dupNamespace false
 
 inductive Spec where
 | Spec (module : String) : LSpec.Discover.Spec

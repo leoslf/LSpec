@@ -32,3 +32,7 @@ import LSpec.Polyfill.Reader
 import LSpec.Polyfill.Writer
 
 import LSpec.Polyfill.Cli
+
+import LSpec.Polyfill.Semigroup
+import LSpec.Polyfill.Monoid
+import LSpec.Polyfill.Traversable

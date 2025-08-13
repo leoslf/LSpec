@@ -95,7 +95,7 @@ def applyDryRun (config : Config) : Eval.EvalForest -> Eval.EvalForest :=
   else
     id
  where
-  removeCleanup : IO Unit -> IO Unit := λ_ => pass
+  removeCleanup : IO Unit -> IO Unit := λ_ => pass'
 
   markSuccess (item : Eval.EvalItem) : Eval.EvalItem :=
     { item with action := λ_ => pure (0, Example.Result.mk "" .Success) }

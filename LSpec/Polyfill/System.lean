@@ -1,18 +1,18 @@
 -- FIXME:
-import Std.Internal.Async.System
+-- import Std.Internal.Async.System
 
 import LSpec.Polyfill.IO
 
-namespace System
-
-export Std.Internal.IO.Async.System (Environment)
-export Std.Internal.IO.Async.System (getHomeDir)
-
-abbrev getEnvironment := Std.Internal.IO.Async.System.getEnv
-abbrev unsetEnv := Std.Internal.IO.Async.System.unsetEnvVar
-abbrev setEnv := Std.Internal.IO.Async.System.setEnvVar
-
-end System
+-- namespace System
+--
+-- export Std.Internal.IO.Async.System (Environment)
+-- export Std.Internal.IO.Async.System (getHomeDir)
+--
+-- abbrev getEnvironment := Std.Internal.IO.Async.System.getEnv
+-- abbrev unsetEnv := Std.Internal.IO.Async.System.unsetEnvVar
+-- abbrev setEnv := Std.Internal.IO.Async.System.setEnvVar
+--
+-- end System
 
 inductive ExitCode where
 | Success (code : UInt8 := 0) : ExitCode

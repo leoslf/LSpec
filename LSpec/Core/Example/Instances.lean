@@ -5,6 +5,9 @@ namespace LSpec.Core
 
 open LSpec.SlimCheck.Utils
 
+universe u
+variable {a : Type}
+
 instance : Example (a -> Example.Result) where
   Arg := a
   evaluate example_ _ hook _ := do

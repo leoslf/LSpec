@@ -34,27 +34,32 @@ name = "Test"
 name = "Test.Main"
 buildType = "debug"
 
+# [[require]]
+# name = "mathlib"
+# scope = "leanprover-community"
+# rev = "059a5bcfe2f022fdcc04b1f294252566da9c21a2"
+
 [[require]]
-name = "mathlib"
+name = "batteries"
 scope = "leanprover-community"
-rev = "059a5bcfe2f022fdcc04b1f294252566da9c21a2"
+rev = "v4.22.0-rc4"
 
 [[require]]
 name = "Cli"
 git = "https://github.com/leoslf/lean4-cli"
-rev = "286f67902bbb5b8cbb1550c471feec44121150de"
+rev = "main" # "286f67902bbb5b8cbb1550c471feec44121150de"
 
 [[require]]
 name = "Printf"
 git = "https://github.com/leoslf/printf.lean"
-rev = "0c13a4baf6e23a9a94742211eb11b257f036a750"
+rev = "master" # "0c13a4baf6e23a9a94742211eb11b257f036a750"
 
 [[require]]
 name = "Free"
 git = "https://github.com/leoslf/free.lean"
-rev = "39e99349f957ea406000fbf0105309b4444b8a8a"
+rev = "master" # "39e99349f957ea406000fbf0105309b4444b8a8a"
 
 [[require]]
 name = "Concurrency"
 git = "https://github.com/leoslf/concurrency.lean"
-rev = "f3440dae0a76204f5b7e56c8b8de3d09848fe631"
+rev = "master" # "f3440dae0a76204f5b7e56c8b8de3d09848fe631"

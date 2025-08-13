@@ -54,7 +54,7 @@ variable {m : Type -> Type} [Monad m]
 
 abbrev Job (m : Type -> Type) (progress : Type) (a : Type) := (progress -> m Unit) -> m a
 
-set_option linter.dupNamespace false
+-- set_option linter.dupNamespace false
 
 inductive Partial progress (a : Type) where
 | Partial : progress -> Partial progress a
@@ -95,8 +95,7 @@ def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue 
   let wait : IO Unit := barrier.take
   let signal : m Unit := do
     barrier.put ()
-  let pass := pure ()
-  let job <- runConcurrently (Semaphore.mk wait pass) cancelQueue action
+  let job <- runConcurrently (Semaphore.mk wait pass') cancelQueue action
   return λnotifyPartial => signal *> job notifyPartial
 
 def JobQueue.enqueue [ToString progress] [Monad m] [MonadLift IO m] (self : JobQueue) (concurrency : Concurrency) : Job BaseIO progress a -> IO (Job m progress (Except IO.Error a)) :=

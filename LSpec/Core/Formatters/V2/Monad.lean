@@ -1,3 +1,4 @@
+import Batteries.Data.List.Basic
 import LSpec.Console.ANSI
 
 import LSpec.Core.Clock
@@ -28,7 +29,7 @@ structure FormatterState where
   color? : Option SGR := .none
 deriving Repr, Inhabited
 
-abbrev FormatM := ReaderT (IO.Ref FormatterState) IO
+abbrev FormatM (a : Type) := ReaderT (IO.Ref FormatterState) IO a
 
 instance : MonadLift BaseIO FormatM where
   monadLift := liftM (m := IO) (n := FormatM) ∘ liftM (m := BaseIO) (n := IO)
@@ -77,7 +78,7 @@ def getFailCount : FormatM Nat :=
   List.length <$> getFailMessages
 
 def getTotalCount : FormatM Nat :=
-  List.sum <$> sequence [getSuccessCount, getPendingCount, getFailCount]
+  List.sum <$> [getSuccessCount, getPendingCount, getFailCount].traverse id
 
 def useDiff : FormatM Bool :=
   getConfigValue Format.Config.useDiff

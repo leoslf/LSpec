@@ -52,7 +52,7 @@ def fromSpecForest : Function.End Config × SpecForest a -> SpecWith a :=
   MonadWriter.tell
 
 def fromSpecList (forest : SpecForest a) : SpecWith a :=
-  fromSpecForest (One.one, forest)
+  fromSpecForest (mempty, forest)
 
 -- FIXME: remove this
 def runIO : IO r -> SpecM a r :=

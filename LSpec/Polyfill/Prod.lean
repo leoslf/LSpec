@@ -1,4 +1,4 @@
-import Mathlib.Control.Traversable.Basic
+-- import Mathlib.Control.Traversable.Basic
 
 universe u
 
@@ -16,5 +16,5 @@ instance : Functor (Prod a) where
 def Prod.traverse {m : Type u -> Type u} [Applicative m] {b b' : Type u} (f : b -> m b') : a × b -> m (a × b')
 | (x , y) => (x, ·) <$> f y
 
-instance : Traversable (a × ·) where
-  traverse := Prod.traverse
+-- instance : Traversable (a × ·) where
+--   traverse := Prod.traverse

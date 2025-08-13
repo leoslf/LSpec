@@ -1,5 +1,6 @@
 import Printf
 
+import LSpec.Prelude
 import LSpec.Core.Path
 import LSpec.Core.Clock
 import LSpec.Core.Format
@@ -51,13 +52,13 @@ def Formatter.toFormat (formatter : Formatter) (config : Format.Config) : IO For
     modify λstate => ({ state with failMessages := state.failMessages.concat failure } : FormatterState)
 
 def silent : Formatter := {
-  started := pass
-  groupStarted := λ_ => pass
-  groupDone := λ_ => pass
-  progress := λ_ _ => pass
-  itemStarted := λ_ => pass
-  itemDone := λ_ _ => pass
-  done := pass
+  started := pass'
+  groupStarted := λ_ => pass'
+  groupDone := λ_ => pass'
+  progress := λ_ _ => pass'
+  itemStarted := λ_ => pass'
+  itemDone := λ_ _ => pass'
+  done := pass'
 }
 
 def checks : Formatter :=
@@ -120,12 +121,13 @@ def actualChunks : List LineDiff -> List Chunk :=
 
 def writeChunks (pre : String) (chunks : List Chunk) (colorize : String -> FormatM Unit) : FormatM Unit := do
   withFailColor $ write (indentation ++ pre)
-  go pass chunks
+  go pass' chunks
  where
-  indentation_ : String := indentation ++ String.replicate pre.length ' '
+  replicate (n : Nat) : Char -> String := List.asString ∘ List.replicate n
+  indentation_ : String := indentation ++ replicate pre.length ' '
 
   go (indent_ : FormatM Unit) : (chunks : List Chunk) -> FormatM Unit
-  | [] => pass
+  | [] => pass'
   | chunk :: chunks => do
     indent_
     match chunk with
