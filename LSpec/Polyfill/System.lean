@@ -1,18 +1,20 @@
--- FIXME:
--- import Std.Internal.Async.System
+-- FIXME: obviously Std.Internal.Async.System is not production ready
+import Std.Internal.Async.System
 
 import LSpec.Polyfill.IO
 
--- namespace System
---
--- export Std.Internal.IO.Async.System (Environment)
--- export Std.Internal.IO.Async.System (getHomeDir)
---
--- abbrev getEnvironment := Std.Internal.IO.Async.System.getEnv
--- abbrev unsetEnv := Std.Internal.IO.Async.System.unsetEnvVar
--- abbrev setEnv := Std.Internal.IO.Async.System.setEnvVar
---
--- end System
+namespace LSpec
+
+namespace System
+
+export Std.Internal.IO.Async.System (Environment)
+export Std.Internal.IO.Async.System (getHomeDir)
+
+abbrev getEnvironment := Std.Internal.IO.Async.System.getEnv
+abbrev unsetEnv := Std.Internal.IO.Async.System.unsetEnvVar
+abbrev setEnv := Std.Internal.IO.Async.System.setEnvVar
+
+end System
 
 inductive ExitCode where
 | Success (code : UInt8 := 0) : ExitCode
@@ -40,4 +42,4 @@ def System.FilePath.splitFileName (path : System.FilePath) : String × String :=
 
 def die [Inhabited a] (message : String) (code : UInt8 := 1) : IO a := do
   let progName <- IO.getProgName
-  ExitCode.Failure code |>.exitWithMessage message
+  ExitCode.Failure code |>.exitWithMessage s!"{progName}: {message}"

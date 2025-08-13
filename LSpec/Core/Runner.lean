@@ -112,30 +112,30 @@ def applyFilterPredicates (config : Config) : Forest c Eval.EvalItem -> Forest c
 
 def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.EvalForest :=
   id
-  >>>> debug (s!"before: {·}")
+  >>>> dbgWith (s!"before: {·}")
   >>>> failItemsWithEmptyDescription config
-  >>>> debug (s!"after failItemsWithEmptyDescription: {·}")
+  >>>> dbgWith (s!"after failItemsWithEmptyDescription: {·}")
   >>>> addDefaultDescriptions
-  >>>> debug (s!"after addDefaultDescriptions: {·}")
+  >>>> dbgWith (s!"after addDefaultDescriptions: {·}")
   >>>> failFocusedItems config
-  >>>> debug (s!"after failFocusedItems: {·}")
+  >>>> dbgWith (s!"after failFocusedItems: {·}")
   >>>> failPendingItems config
-  >>>> debug (s!"after failPendingItems: {·}")
+  >>>> dbgWith (s!"after failPendingItems: {·}")
   -- >>>> Extension.applySpecTransformation config
   -- >>>> dbgTraceVal
   >>>> focusSpec config
-  >>>> debug (s!"after focusSpec: {·}")
+  >>>> dbgWith (s!"after focusSpec: {·}")
   >>>> toEvalItemForest params
-  >>>> debug (s!"after toEvalItemForest: {·}")
+  >>>> dbgWith (s!"after toEvalItemForest: {·}")
   >>>> applyDryRun config
-  >>>> debug (s!"after applyDryRun: {·}")
+  >>>> dbgWith (s!"after applyDryRun: {·}")
   >>>> applyFilterPredicates config
-  >>>> debug (s!"applyFilterPredicates: {·}")
+  >>>> dbgWith (s!"applyFilterPredicates: {·}")
   >>>> randomize
-  >>>> debug (s!"after randomize: {·}")
+  >>>> dbgWith (s!"after randomize: {·}")
   -- FIXME:
   >>>> Forest.prune
-  >>>> debug (s!"after Forest.prune: {·}")
+  >>>> dbgWith (s!"after Forest.prune: {·}")
  where
   params : Params := Params.mk
 
@@ -144,9 +144,12 @@ def specToEvalForest (seed : Seed) (config : Config) : SpecForest Unit -> Eval.E
       Forest.randomize seed.toNat
     else
       id
-  debug {a} [ToString a] (format : a -> String) (value : a) : a :=
-    value
-    -- dbgTrace (format value) $ λ() => value
+
+  debug := false
+  dbgWith {α} (f : α -> String) (value : α) : α := Id.run do
+    if debug then
+      return dbgTraceWith f value
+    return value
 
 inductive ProgressReporting where
 | Disabled : ProgressReporting

@@ -20,5 +20,5 @@ def withTimer [Monad m] [MonadFinally m] [MonadLift IO m] (delay : Seconds) (act
     -- dbgTraceM! "cancelling task"
     IO.cancel task
 
-  IO.bracket before after λ(task : Task Unit) => do
+  IO.bracket before after λ_ => do
     action $ ref.modifyGet (false, ·)

@@ -1,5 +1,3 @@
--- import GetOpt.Declarative
-
 import LSpec.Prelude
 
 import LSpec.Core.Seed
@@ -13,7 +11,6 @@ import LSpec.Core.Config.Options
 
 namespace LSpec.Core
 
--- open GetOpt
 open LSpec.Core (Seed)
 open LSpec.Core.Formatters
 
@@ -24,12 +21,6 @@ structure SlimCheckConfig where
   maxSize : Option Nat
   maxShrinks : Option Nat
 deriving Repr, Inhabited, DecidableEq
-
-#check Format
-#check Format.Config
-
-#synth Repr (Path -> Bool)
-#synth Repr (Option (Path -> Bool))
 
 structure Config where
   mk ::
@@ -46,13 +37,10 @@ structure Config where
   rerun : Bool := false
   rerunAllOnSuccess : Bool := false
 
-  -- match_patterns : List String := []
-  -- skip_patterns : List String := []
-
-  -- /--
-  --   A predicate that is used to filter the spec before it is run.
-  --   Only examples that satisfy the predicate are run.
-  -- -/
+  /--
+    A predicate that is used to filter the spec before it is run.
+    Only examples that satisfy the predicate are run.
+  -/
   filter? : Option (Path -> Bool) := .none
   skip? : Option (Path -> Bool) := .none
 
@@ -69,7 +57,6 @@ structure Config where
   times : Bool := false
   expertMode : Bool := false
   availableFormatters : List (String × V2.Formatter)
-  -- NOTE: now it is a derived field from formatter?
   format? : Option (Format.Config -> IO Format) := .none
   -- FIXME: universe-level problems
   -- formatterV1? : Option V1.Formatter := .none
@@ -80,14 +67,6 @@ deriving Inhabited, Repr
 
 instance : ToString Config where
   toString := reprStr
-
-#check Config
--- #print Config
-
--- #check Annotations
--- #check Format
--- #check Format.Config
--- #check Config
 
 def Config.mkDefault (formatters : List (String × V2.Formatter)) : Config :=
   {
@@ -126,34 +105,12 @@ def Filter.or : Filter -> Filter -> Filter
 | .some f, .some g => .some $ λpath => f path || g path
 | f, g => f <|> g
 
--- def Filter.of (patterns : List String) : Filter :=
---   patterns
---     |>.map (Option.some ∘ Path.filterPredicate)
---     |>.foldl Filter.or Option.none
---
--- def Config.filter? (config : Config) : Filter :=
---   Filter.of config.match_patterns
---
--- def Config.skip? (config : Config) : Filter :=
---   Filter.of config.skip_patterns
-
 def Config.addMatch (pattern : String) (config : Config) : Config :=
   { config with filter? := Option.some (Path.filterPredicate pattern) |>.or config.filter? }
 
 def Config.addSkip (pattern : String) (config : Config) : Config :=
   { config with skip? := Option.some (Path.filterPredicate pattern) |>.or config.skip? }
 
--- def argument {Config} (name : String) (parser : String -> Option a) (setter : a -> Config -> Config) : Declarative.Types.Setter Config :=
---   .Arg name $ λ input config => flip setter config <$> parser input
-
--- def commandLineOnlyOptions : List (Declarative.Types.Option' Config) :=
---   [
---     .mk "ignore-dot-lspec" .none (.NoArg setIgnoreConfigFile) "do not read options from ~/.lspec and .lspec" true,
---     .mk "match" (.some 'm') (argument "PATTERN" pure addMatch) "only run examples that match given PATTERN" true,
---     .mk "skip" .none (argument "PATTERN" pure addSkip) "skip examples that match given PATTERN" true,
---   ]
---  where
---   setIgnoreConfigFile (config : Config) := { config with ignoreConfigFile := true }
 
 structure ExtensionOptions where
   mk ::

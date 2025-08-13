@@ -1,5 +1,4 @@
 import Cli
--- import GetOpt.Declarative
 
 import LSpec.Prelude
 import LSpec.Core.Config.Definition
@@ -19,24 +18,6 @@ structure ConfigFile where
   args : List String
 deriving Repr, BEq, Inhabited, TypeName
 
--- def runnerOptions : List (Declarative.Types.Option' Config) := [] -- TODO
---
--- def formatterOptions (formatters : List Formatter) : List (Declarative.Types.Option' Config) := [] -- TODO
---
--- def otherOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
---   [
---     ("RUNNER OPTIONS", runnerOptions),
---     ("FORMATTER OPTIONS", formatterOptions formatters),
---     -- ("OPTIONS FOR QUICKCHECK", quickCheckOptions),
---     -- ("OPTIONS FOR SMALLCHECK", smallCheckOptions),
---   ] ++ extensionOptions
---  where
---   formatters := config.availableFormatters
---   extensionOptions := getExtensionOptions config
-
--- def commandLineOptions (config : Config) : List (String × List (Declarative.Types.Option' Config)) :=
---   ("OPTIONS", commandLineOnlyOptions) :: otherOptions config
-
 @[extern "lean_uv_os_homedir"]
 opaque getHomeDir : IO System.FilePath
 
@@ -47,7 +28,7 @@ def readConfigFile (path : System.FilePath) : IO (Option ConfigFile) := do
   return (.some $ ConfigFile.mk path content.unescapeArgs)
 
 def readGlobalConfigFile : IO (Option ConfigFile) := do
-  let home <- getHomeDir
+  let home <- System.getHomeDir
   readConfigFile $ home / ".lspec"
 
 def readLocalConfigFile : IO (Option ConfigFile) := do
@@ -168,7 +149,6 @@ def parseOptions (cmd : Cli.Cmd) (args : List String) (config : Config) : EIO (E
     throw (.Failure 2, error)
 
 def readConfig (cmd : Cli.Cmd) (config : Config := default) (args : List String) : IO Config := do
-  let progName <- IO.getProgName
   let options? <- Functor.map String.unescapeArgs <$> IO.getEnv LSPEC_OPTIONS
   let mut args := args ++ options?.getD []
   match <- parseOptions cmd args config |>.toBaseIO with

@@ -64,8 +64,8 @@ deriving Inhabited
 def Functor.void [Functor f] : f a -> f Unit :=
   Functor.map $ Function.const _ ()
 
-#synth ∀{a : Type}, Nonempty (Except IO.Error a)
-#synth ∀{a : Type}, Nonempty (Except IO.Error a)
+-- #synth ∀{a : Type}, Nonempty (Except IO.Error a)
+-- #synth ∀{a : Type}, Nonempty (Except IO.Error a)
 
 partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (semaphore : Semaphore) (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
   let result : Concurrency.MVar (Partial progress a) <- Concurrency.MVar.empty

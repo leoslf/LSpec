@@ -1,4 +1,3 @@
--- import Lake.CLI
 import Cli
 
 import LSpec.Core.Config.Definition
@@ -8,8 +7,6 @@ open Cli
 namespace LSpec.Core.Runner
 
 open LSpec.Core.Config
-
-set_option diagnostics true
 
 -- def mkLoadConfig (lakeOptions : LakeOptions) : IO LoadConfig := do
 --   match <- lakeOptions.mkLoadConfig.toBaseIO with

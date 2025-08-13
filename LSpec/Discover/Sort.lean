@@ -9,8 +9,8 @@ abbrev Lex (α : Type u) := α
 
 instance [Ord α] [Ord β] : Ord (Lex (α × β)) := lexOrd
 
-#synth Ord (Lex (Char × Char))
-#synth Ord (List (Lex (Char × Char)))
+-- #synth Ord (Lex (Char × Char))
+-- #synth Ord (List (Lex (Char × Char)))
 
 inductive Chunk where
 | Numeric (n : Nat) (length : Nat) : Chunk

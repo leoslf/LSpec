@@ -1,3 +1,7 @@
+import Std.Internal.Async.Basic
+
+open Std.Internal.IO.Async
+
 namespace LSpec.Core.Clock
 
 abbrev Seconds := Float
@@ -25,23 +29,15 @@ def measure [Monad m] [MonadLift BaseIO m] (action : m a) : m (Seconds × a) := 
 def sleep (seconds : Seconds) : BaseIO Unit := do
   IO.sleep $ seconds.toMilliseconds.toUInt32
 
-def timeout [Monad m] [MonadFinally m] [MonadLift BaseIO m] (seconds : Seconds) (action : m a) : m (Option a) := do
+def timeout [Monad m] [MonadFinally m] [MonadLift BaseIO m] /- [MonadAwait Task m] [MonadAsync t m] [MonadAwait t m] [Inhabited a] -/ (seconds : Seconds) (action : m a) : m (Option a) := do
+  -- let watchdog : m (Option a) := do
+  --   seconds.sleep
+  --   return .none
+  -- let action' : m (Option a) := do
+  --   .some <$> action
+  -- race (m := m) (t := t) watchdog action'
+  -- FIXME:
   .some <$> action
-  -- let token <- IO.CancelToken.new
-  -- let watchdog <- BaseIO.asTask $ do
-  --   sleep seconds
-  --   token.set
-  -- IO.bracket watchdog IO.cancel do
-  --   if <- IO.checkCanceled then
-  --     action
-  -- let result <- do
-  --   try
-  --     action
-  --   catch
-  --   | e => do
-  --     IO.cancel watchdog
-  -- IO.cancel watchdog
-  -- return result
 
 end Seconds
 

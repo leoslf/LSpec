@@ -20,7 +20,7 @@ instance : Semigroup (Function.End α) where
   op := Function.comp
   stimes n f _ := Id.run do
     let mut result := f
-    for i in [0:n] do
+    for _ in [0:n] do
       result := result ∘ f
     return result
   sconcat fs _ := fs.foldl Function.comp id

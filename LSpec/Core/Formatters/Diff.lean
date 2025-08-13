@@ -16,6 +16,7 @@ deriving Repr, BEq, Inhabited
 
 
 def lineDiff (context? : Option Nat) (expected : String) (actual : String) : List LineDiff :=
+  -- FIXME:
   []
  --  context?.elim id applyContext $ singleLineDiffs diffs
  -- where

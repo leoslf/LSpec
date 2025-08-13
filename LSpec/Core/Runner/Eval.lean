@@ -224,7 +224,7 @@ def reportResult (path : Path) (location? : Option Location) : Clock.Seconds × 
     | .Success => .Success
     | .Pending location? reason? =>
       .Pending location? reason?
-    | .Failure location? error@(.Error _ exception) =>
+    | .Failure location? error@(.Error _ _) =>
       .Failure (location? <|> /- TODO: .some extractLocation exception -/ none) error
     | .Failure location? error =>
       .Failure location? $

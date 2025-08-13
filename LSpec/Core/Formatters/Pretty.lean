@@ -18,7 +18,8 @@ def recoverMultiLineString (unicode : Bool) (input : String) : Option String :=
  where
   isSafe (c : Char) : Bool := (unicode || c.isAscii) && not c.isControl || c == '\n'
   isMultiline (input : String) : Bool := input.lines.length > 1
-  shouldParseBack (input : String) :Bool := input.all isSafe && isMultiline input    
+  shouldParseBack (input : String) :Bool := input.all isSafe && isMultiline input
+
 def pretty (unicode : Bool) : String -> Option String := .some -- FIXME: sorry
 /-
   parseValue >=> render

@@ -57,7 +57,7 @@ instance : Semigroup Ordering where
   | [], h => nomatch h
   | x :: xs, _ => xs.foldl op x
 
-  stimes n x h :=
+  stimes n x _ :=
     match compare n 0 with
     | .lt => unreachable!
     | .eq => .eq
@@ -98,7 +98,7 @@ instance {α : Type} [Semigroup α] : Semigroup (IO α) where
   -- FIXME: native
   stimes n action _ := Id.run do
     let mut result := action
-    for i in [0:n] do
+    for _ in [0:n] do
       result := op result action
     return result
  where

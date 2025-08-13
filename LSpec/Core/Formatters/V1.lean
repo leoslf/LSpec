@@ -45,8 +45,8 @@ structure Formatter where
   footer : FormatM Unit
 deriving Inhabited
 
-#check Formatter
-#check Applicative FormatM
+-- #check Formatter
+-- #check Applicative FormatM
 
 def silent : Formatter := {
   header := pass'

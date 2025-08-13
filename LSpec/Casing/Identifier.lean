@@ -52,7 +52,7 @@ partial def fromHumps : String -> Identifier String :=
   go : String -> List String
   | ⟨[]⟩ => [""]
   | ⟨[x]⟩ => [String.singleton x]
-  | xxs@(⟨x :: xs⟩) =>
+  | xxs@(⟨x :: _⟩) =>
     if x.isUpper then
       match xxs.span Char.isUpper with
       | (lhs, "") => [lhs]

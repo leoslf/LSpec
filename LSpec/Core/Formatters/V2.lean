@@ -270,7 +270,7 @@ def specdoc : Formatter :=
       | .Failure _ _ =>
         withFailColor $ do
           let n <- getFailCount
-          writeResult nesting (requirement ++ " FAILED [{n}]") duration info
+          writeResult nesting (requirement ++ s!" FAILED [{n}]") duration info
     done := do
       -- withDebugColor $ writeLine "specdoc.done"
       defaultFailedFormatter *> defaultFooter

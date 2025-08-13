@@ -24,7 +24,7 @@ mutual
     match self with
     | .Node group children =>
       s!"Node {group} {Forest.reprPrec children prec}"
-    | .NodeWithCleanup location? cleanup children =>
+    | .NodeWithCleanup location? _ children =>
       s!"NodeWithCleanup {location?} <cleanup> {Forest.reprPrec children prec}"
     | .Leaf item => s!"Leaf {Repr.reprPrec item prec}"
 

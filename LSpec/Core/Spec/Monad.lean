@@ -18,22 +18,22 @@ deriving Repr
 
 abbrev SpecM a := WriterT (Function.End Config × SpecForest a) (ReaderT Env IO)
 
-#synth Monad IO
-#synth ∀α, Monoid (Function.End Config × SpecForest α)
-#synth Monad (ReaderT Env IO)
-#synth ∀α, Monad (WriterT (Function.End Config × SpecForest α) (ReaderT Env IO))
-
-#synth ∀a, Functor (SpecM a)
-#synth ∀a, Applicative (SpecM a)
-#synth ∀a, Monad (SpecM a)
+-- #synth Monad IO
+-- #synth ∀α, Monoid (Function.End Config × SpecForest α)
+-- #synth Monad (ReaderT Env IO)
+-- #synth ∀α, Monad (WriterT (Function.End Config × SpecForest α) (ReaderT Env IO))
+--
+-- #synth ∀a, Functor (SpecM a)
+-- #synth ∀a, Applicative (SpecM a)
+-- #synth ∀a, Monad (SpecM a)
 
 -- NOTE: abbrev is NOT transparent
 -- Defining SpecWith and Spec as notation with parentheses delays the type application, eventually allowing do-notation
 notation:max "SpecWith " a:max => (SpecM a Unit)
 notation:max "Spec" => (SpecM Unit Unit)
 
-#check SpecWith Unit
-#check Spec
+-- #check SpecWith Unit
+-- #check Spec
 
 def SpecM.run : SpecWith a -> IO (Function.End Config × SpecForest a) :=
   flip ReaderT.run (Env.mk []) ∘ WriterT.exec
@@ -53,10 +53,6 @@ def fromSpecForest : Function.End Config × SpecForest a -> SpecWith a :=
 
 def fromSpecList (forest : SpecForest a) : SpecWith a :=
   fromSpecForest (mempty, forest)
-
--- FIXME: remove this
-def runIO : IO r -> SpecM a r :=
-  liftM
 
 def mapSpecForest (f : SpecForest a -> List (SpecTree b)) : SpecM a r -> SpecM b r :=
   WriterT.map (Functor.map $ Functor.map $ second f)

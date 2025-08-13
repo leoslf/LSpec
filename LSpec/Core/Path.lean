@@ -6,9 +6,6 @@ namespace LSpec.Core
 abbrev Path := List String × String
 deriving instance TypeName for Path
 
-#synth TypeName Path
-#synth Repr Path
-
 namespace Path
 
 def join : Path -> String

@@ -58,7 +58,7 @@ def isFile (path : System.FilePath) : BaseIO Bool := do
   | .ok metadata => return metadata.type == IO.FS.FileType.file
   | .error _ => return false
 
-def Hook.mk (directory : System.FilePath) (files : Array IO.FS.DirEntry) : IO Hook :=
+def Hook.mk (files : Array IO.FS.DirEntry) : IO Hook :=
   match files.find? (·.fileName == "SpecHook.hs") with
   | .none => pure .WithoutHook
   | .some file => do
@@ -69,7 +69,7 @@ def Hook.mk (directory : System.FilePath) (files : Array IO.FS.DirEntry) : IO Ho
 
 partial def specForest (directory : System.FilePath) : IO (Option Forest) := do
   let files <- directory.readDir
-  let hook <- Hook.mk directory files
+  let hook <- Hook.mk files
   let forests <- Array.reduceOption <$> files.mapM toSpecTree
   pure $ Forest.ensure hook $ Array.toList $ forests.qsort ((Ordering.isLT ∘ ·) ∘ compareNaturallyBy Tree.sortKey)
  where
@@ -86,7 +86,7 @@ partial def specForest (directory : System.FilePath) : IO (Option Forest) := do
         pure .none
 
 def discover (source : System.FilePath) : IO (Option Forest) :=
-  let (directory, basename) := source.splitFileName
+  let (directory, basename) := System.FilePath.splitFileName source
   let filterSrc : Forest -> Option Forest
   | { hook, trees } => Forest.ensure hook $ (toSpec basename |>.elim id (List.filter ∘ (λa b => a != b))) trees
   (· >>= filterSrc) <$> specForest directory

@@ -24,8 +24,6 @@ inductive ColorMode where
 | always : ColorMode
 deriving Repr, DecidableEq, BEq, Hashable, Nonempty, ParseableType
 
-#synth ParseableType ColorMode
-
 instance : Inhabited ColorMode where
   default := .auto
 
@@ -34,8 +32,6 @@ inductive UnicodeMode where
 | never : UnicodeMode
 | always : UnicodeMode
 deriving Repr, DecidableEq, BEq, Hashable, Nonempty, ParseableType
-
-#synth ParseableType ColorMode
 
 instance : Inhabited UnicodeMode where
   default := .auto

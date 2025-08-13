@@ -1,8 +1,10 @@
-import Batteries.Data.List.Basic
+import Std.Internal.Async.Basic
 import LSpec.Console.ANSI
 
 import LSpec.Core.Clock
 import LSpec.Core.Format
+
+open Std.Internal.IO.Async
 
 namespace LSpec.Core.Formatters.V2
 
