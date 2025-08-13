@@ -1,3 +1,5 @@
+namespace LSpec
+
 def Array.shuffle [RandomGen G] (ref : ST.Ref s G) (input : Array a) : ST s (Array a) := do
   let mut xs := input
   let n := xs.size
@@ -9,5 +11,5 @@ def Array.shuffle [RandomGen G] (ref : ST.Ref s G) (input : Array a) : ST s (Arr
     ref.modifyGet $ λ generator => randNat generator lo hi
 
 def List.shuffle [RandomGen G] (ref : ST.Ref s G) (xs : List a) : ST s (List a) :=
-  Array.toList <$> xs.toArray.shuffle ref
+  Array.toList <$> Array.shuffle ref xs.toArray
 

@@ -128,9 +128,9 @@ def Forest.filter : (a -> Bool) -> Forest c a -> Forest c a:=
 mutual
   def Tree.shuffle [RandomGen G] (ref : ST.Ref s G) : Tree c a -> ST s (Tree c a)
   | .Node group children =>
-    .Node group <$> children.shuffle ref
+    .Node group <$> List.shuffle ref children
   | .NodeWithCleanup location action children =>
-    .NodeWithCleanup location action <$> children.shuffle ref
+    .NodeWithCleanup location action <$> List.shuffle ref children
   | .Leaf item => pure $ .Leaf item
 
   def Forest.shuffle [RandomGen G] (ref : ST.Ref s G) (forest : Forest c a) : ST s (Forest c a) :=
