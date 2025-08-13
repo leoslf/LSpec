@@ -173,6 +173,7 @@ def sequenceActions : List (EvalM Unit) -> EvalM Unit :=
   go : List (EvalM Unit) -> EvalM Unit
   | [] => pure ()
   | action :: actions => do
+    dbgTraceM "action"
     action
     if not (<- shouldAbort) then
       go actions
@@ -244,6 +245,7 @@ def reportItem (path : Path) (location? : Option Location) (action : EvalM (Cloc
   reportResult path location? =<< action
 
 def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
+  dbgTraceM "eval"
   sequenceActions $ specs.flatMap foldSpec
  where
   evalItem (groups : List String) (item : RunningItem EvalM) : EvalM Unit := do
@@ -263,7 +265,9 @@ def eval (specs : RunningForest Unit EvalM) : EvalM Unit := do
 
 def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Format.Item)) := do
   withJobQueue config.concurrentJobs λqueue => do
+    dbgTraceM "withJobQueue"
     withTimer 0.05 λtimer => do
+      dbgTraceM "withTimer"
       let env <- Env.new config
       let runningSpecs_ <- queue.enqueueItems specs
       let applyReportProgress (item : RunningItem_ IO) : RunningItem IO :=
@@ -278,11 +282,8 @@ def runFormatter (config : Config) (specs : EvalForest) : IO (List (Path × Form
 
       try
         ReaderT.run (eval runningSpecs) env
-      catch
-      | e => do
-        formatDone
-        throw e
       finally
+        dbgTraceM "before formatDone"
         formatDone
 
       let results <- getResults
