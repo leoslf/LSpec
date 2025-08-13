@@ -21,7 +21,7 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
   let filteredSpec := specToEvalForest seed config spec
   let filteredCount : Nat := Forest.leafs filteredSpec
   let specCount : Nat := Forest.leafs spec
-  dbgTraceM s!"filteredCount: {filteredCount}"
+  -- dbgTraceM s!"filteredCount: {filteredCount}"
   if config.failOn.contains .empty && filteredCount == 0 then
     if specCount != 0 then
       die "all spec items have been filtered; failing due to --fail-on=empty"
@@ -64,8 +64,8 @@ def SpecForest.runWithOldFailureReport (oldFailureReport? : Option FailureReport
       failFast := config.failFast
       colorMode := if colorMode.shouldUseColor then .Enabled else .Disabled
     }
-    dbgTraceM s!"evalConfig: {evalConfig}"
-    dbgTraceM s!"filteredSpec: {filteredSpec}"
+    -- dbgTraceM s!"evalConfig: {evalConfig}"
+    -- dbgTraceM s!"filteredSpec: {filteredSpec}"
     Eval.runFormatter evalConfig filteredSpec
 
   return results
@@ -88,18 +88,18 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
   | (config, forest) =>
     let args <- ArgsT.getArgs
     let config <- readConfig cmd config args
-    dbgTraceM s!"{config}"
+    -- dbgTraceM s!"{config}"
     let oldFailureReport? <- FailureReport.readOnRerun config
 
     let normalMode := do
-      dbgTraceM "normalMode"
+      -- dbgTraceM "normalMode"
       let results <- ArgsT.withArgs [] do
         SpecForest.runWithOldFailureReport oldFailureReport? forest config
       dbgTraceM "after SpecForest.runWithOldFailureReport"
       return results
 
     let rerunMode := do
-      dbgTraceM "config.rerunAllOnSuccess"
+      -- dbgTraceM "config.rerunAllOnSuccess"
       let result <- normalMode
       if rerunAll config oldFailureReport? result then
         lspecWithSpecResult defaults spec
@@ -112,12 +112,12 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
       normalMode
 
 def Summary.evaluate (summary : Summary) : ArgsT IO Unit := do
-  dbgTraceM s!"{summary}"
+  -- dbgTraceM s!"{summary}"
   unless summary.isSuccess do
     die "summary is not success"
 
 def SpecResult.evaluate (result : SpecResult) : ArgsT IO Unit := do
-  dbgTraceM s!"{result}"
+  -- dbgTraceM s!"{result}"
   unless result.success do
     die "result is not success"
 
