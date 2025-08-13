@@ -67,7 +67,7 @@ def Functor.void [Functor f] : f a -> f Unit :=
 -- #synth ∀{a : Type}, Nonempty (Except IO.Error a)
 -- #synth ∀{a : Type}, Nonempty (Except IO.Error a)
 
-partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (semaphore : Semaphore) (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
+def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (semaphore : Semaphore) (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
   let result : Concurrency.MVar (Partial progress a) <- Concurrency.MVar.empty
   let worker : IO a := semaphore.bracket do
     try
@@ -92,15 +92,16 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
     cancelQueue.modify (·.concat $ task.map λ_ => ())
 
   let job <- IO.bracket (EIO.asTask worker) pushOnCancelQueue pure
-  let rec waitForResult (notifyPartial : progress -> m Unit) : m (Except IO.Error a) := do
-    match <- result.take with
-    | .Partial progress => do
+  let waitForResult (notifyPartial : progress -> m Unit) : m (Except IO.Error a) := do
+    while true do
+      let .Partial progress <- result.take
+        | break
       dbgTraceM' ".Partial (progress: {progress}) received"
       notifyPartial progress
-      waitForResult notifyPartial
-    | .Done => do
-      dbgTraceM' ".Done received, waiting for job"
-      IO.wait job
+      continue
+
+    dbgTraceM' ".Done received, waiting for job"
+    IO.wait job
   return waitForResult
 
 def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
