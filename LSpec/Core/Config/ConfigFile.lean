@@ -131,7 +131,9 @@ def parseOptions (cmd : Cli.Cmd) (args : List String) (config : Config) : EIO (E
       config := { config with rerunAllOnSuccess := true }
 
     if let .some flag := parsed.flag? "jobs" then
-      config := { config with concurrentJobs? := .some $ flag.as! Nat }
+      let nproc <- IO.nproc.toEIO λe => (.Failure 1, e.toString)
+      let jobs := flag.as! Nat
+      config := { config with concurrentJobs? := .some $ (Min.min nproc (Max.max 1 jobs)) }
 
     if let .some flag := parsed.flag? "seed" then
       config := { config with seed? := .some $ flag.as! Seed }
