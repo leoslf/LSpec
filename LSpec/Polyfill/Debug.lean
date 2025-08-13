@@ -9,7 +9,7 @@ def dbgTraceWith [ToString β] (f : α -> β) (value : α) : α :=
   dbgTrace s!"{f value}" $ λ() => value
 
 @[never_extract]
-def dbgTraceM' [Monad m] [MonadLift BaseIO m] (s : String) : m Unit :=
+def dbgTraceM' (s : String) : BaseIO Unit := do
   let tid <- IO.getTID
   dbgTraceM s!"[tid: {tid}] {s}"
 
