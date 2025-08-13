@@ -73,13 +73,15 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
     try
       dbgTraceM' "enter semaphore.bracket"
 
-      if (<- IO.checkCanceled) then
+      if <- IO.checkCanceled then
+        dbgTraceM' "canceled"
         throw $ IO.userError "canceled"
 
       let partialResult (p : progress) : BaseIO Unit := do
         dbgTraceM' "sending partial result"
         result.put $ Partial.Partial p
 
+      dbgTraceM "running action"
       action partialResult
     finally
       dbgTraceM' "sending done"
@@ -102,12 +104,16 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
   return waitForResult
 
 def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
-  let barrier : Concurrency.MVar Unit <- Concurrency.MVar.empty
-  let wait : IO Unit := barrier.take
-  let signal : m Unit := do
-    barrier.put ()
-  let job <- runConcurrently (Semaphore.mk wait pass') cancelQueue action
-  return λnotifyPartial => signal *> job notifyPartial
+  -- let barrier : Concurrency.MVar Unit <- Concurrency.MVar.empty
+  -- let wait : IO Unit := barrier.take
+  -- let signal : m Unit := do
+  --   barrier.put ()
+  -- let job <- runConcurrently (Semaphore.mk wait pass') cancelQueue action
+  -- return λnotifyPartial => signal *> job notifyPartial
+  -- FIXME
+  let mutex <- Semaphore.new 1
+  let job <- runConcurrently mutex cancelQueue action
+  return λnotifyPartial => job notifyPartial
 
 def JobQueue.enqueue [ToString progress] [Monad m] [MonadLift IO m] (self : JobQueue) (concurrency : Concurrency) : Job BaseIO progress a -> IO (Job m progress (Except IO.Error a)) :=
   match concurrency with
