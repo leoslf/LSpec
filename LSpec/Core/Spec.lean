@@ -95,7 +95,7 @@ partial def lspecWithSpecResult (defaults : Config) (spec : Spec) : ArgsT IO Spe
       -- dbgTraceM "normalMode"
       let results <- ArgsT.withArgs [] do
         SpecForest.runWithOldFailureReport oldFailureReport? forest config
-      dbgTraceM "after SpecForest.runWithOldFailureReport"
+      -- dbgTraceM "after SpecForest.runWithOldFailureReport"
       return results
 
     let rerunMode := do
