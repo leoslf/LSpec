@@ -175,8 +175,13 @@ def sequenceActions : List (EvalM Unit) -> EvalM Unit :=
   | action :: actions => do
     dbgTraceM "action"
     action
-    if not (<- shouldAbort) then
-      go actions
+
+    if <- shouldAbort then
+      dbgTraceM "shouldAbort"
+      return ()
+
+    go actions
+
 
 structure FoldTree (c : Type) (a : Type) (r : Type) where
   onGroupStarted : Path -> r

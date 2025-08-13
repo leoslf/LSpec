@@ -71,14 +71,20 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
   let result : Concurrency.MVar (Partial progress a) <- Concurrency.MVar.empty
   let worker : IO a := semaphore.bracket do
     try
+      dbgTraceM "enter semaphore.bracket"
+
       if (<- IO.checkCanceled) then
         throw $ IO.userError "canceled"
 
       let partialResult (p : progress) : BaseIO Unit := do
+        dbgTraceM "sending partial result"
         result.put $ Partial.Partial p
+
       action partialResult
     finally
+      dbgTraceM "sending done"
       result.put Partial.Done
+      dbgTraceM "exit semaphore.bracket"
 
   let pushOnCancelQueue (task : Task (Except IO.Error a)) : IO Unit := do
     cancelQueue.modify (·.concat $ task.map λ_ => ())
@@ -86,8 +92,13 @@ partial def runConcurrently [ToString progress] [Monad m] [MonadLift IO m] (sema
   let job <- IO.bracket (EIO.asTask worker) pushOnCancelQueue pure
   let rec waitForResult (notifyPartial : progress -> m Unit) : m (Except IO.Error a) := do
     match <- result.take with
-    | .Partial progress => notifyPartial progress *> waitForResult notifyPartial
-    | .Done => IO.wait job
+    | .Partial progress => do
+      dbgTraceM ".Partial (progress: {progress}) received"
+      notifyPartial progress
+      waitForResult notifyPartial
+    | .Done => do
+      dbgTraceM ".Done received, waiting for job"
+      IO.wait job
   return waitForResult
 
 def runSequentially [ToString progress] [Monad m] [MonadLift IO m] (cancelQueue : CancelQueue) (action : Job BaseIO progress a) : IO (Job m progress (Except IO.Error a)) := do
