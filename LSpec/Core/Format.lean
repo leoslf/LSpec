@@ -57,7 +57,9 @@ structure Config where
   externalDiff? : Option (String -> String -> IO Unit) := .none
   prettyPrint : Bool := false
   prettyPrintFunction : Option (String -> String -> String × String) := .none
-  formatException : IO.Error -> String := IO.Error.formatExceptionWith toString
+  formatException : IO.Error -> String := IO.Error.formatExceptionWith λ
+    | .userError message => message
+    | e => toString e
   printTimes : Bool := false
   htmlOutput : Bool := false
   printCpuTime : Bool := false
