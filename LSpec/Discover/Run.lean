@@ -60,7 +60,7 @@ def toSpec [ToString System.FilePath] (file : System.FilePath) : IO (Option Tree
     return .none
 
   let fileStem := file.fileStem.get!
-  unless fileStem.endsWith "Spec" && file.extension == "lean" do
+  unless fileStem.endsWith "Spec" && fileStem != "Spec" && file.extension == "lean" do
     dbgTraceM s!"skipping {file}"
     return .none
 
@@ -180,8 +180,8 @@ mutual
   partial def formatSpecs.fromForest (specs : List Spec) : String := Id.run do
     if specs.isEmpty then
       return "do pure ()"
-    
-    return " *> ".intercalate $ specs.map formatSpecs.fromTree 
+
+    return " *> ".intercalate $ specs.map formatSpecs.fromTree
 
   partial def formatSpecs.fromTree : Spec -> String
   | .Spec name => s!"describe \"{name}\" {name}"

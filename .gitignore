@@ -5,4 +5,4 @@
 *.swp
 *.swo
 
-Test/Main.lean
+Test/Spec.lean

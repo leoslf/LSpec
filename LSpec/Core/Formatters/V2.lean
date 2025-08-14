@@ -46,6 +46,7 @@ def Formatter.toFormat (formatter : Formatter) (config : Format.Config) : IO For
       | .Success => increaseSuccessCount
       | .Pending _ _ => increasePendingCount
       | .Failure location? err => addFailure $ Failure.mk (location? <|> item.location?) path err
+      formatter.itemDone path item
     | .Done _ => formatter.done
  where
   addFailure (failure : Failure) :=
@@ -313,5 +314,4 @@ def progress : Formatter := {
     | .Success => withSuccessColor $ write "."
     | .Pending _ _ => withPendingColor $ write "."
     | .Failure _ _ => withFailColor $ write "F"
-    (<- IO.getStdout).flush
 }

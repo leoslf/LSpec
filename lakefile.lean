@@ -27,9 +27,9 @@ require "Free" from git
 require "Concurrency" from git
   "https://github.com/leoslf/concurrency.lean" @ "master"
 
-target TestMain pkg : System.FilePath := do
+target GeneratedTestSpec pkg : System.FilePath := do
   -- NOTE: make sure to .gitignore the file
-  let output := pkg.dir / "Test" / "Main.lean"
+  let output := pkg.dir / "Test" / "Spec.lean"
   let _ <- liftM do
     IO.Process.run {
       cmd := "lake"
@@ -43,8 +43,8 @@ lean_lib Test
 
 @[default_target]
 lean_exe lspec_tests where
-  root := `Test.Main
+  root := `Test.Spec
   buildType := .debug
-  needs := #[TestMain]
+  needs := #[GeneratedTestSpec]
   supportInterpreter := true
 

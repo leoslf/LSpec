@@ -1,5 +1,6 @@
 import LSpec.SlimCheck.Utils
 import LSpec.Core.Example.Definition
+import LSpec.Core.Args
 
 namespace LSpec.Core
 
@@ -51,4 +52,13 @@ instance (priority := low) : Example (a -> IO Unit) where
 instance (priority := low) : Example (IO Unit) where
   Arg := Unit
   evaluate e := Example.evaluate $ liftM (n := ExpectationM) e
+
+instance (priority := low) : Example (a -> ArgsT IO Unit) where
+  Arg := a
+  evaluate e := Example.evaluate (e := a -> IO Unit) λarg => do
+    ArgsT.run (args := []) $ e arg
+
+instance (priority := low) : Example (ArgsT IO Unit) where
+  Arg := Unit
+  evaluate e := Example.evaluate (e := Unit -> ArgsT IO Unit) λ() => e
 

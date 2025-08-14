@@ -85,6 +85,10 @@ def getTotalCount : FormatM Nat :=
 def useDiff : FormatM Bool :=
   getConfigValue Format.Config.useDiff
 
+def getStream : FormatM (IO.FS.Stream) := do
+  let ref? <- getConfigValue Format.Config.stream?
+  ref?.elim IO.getStdout (·.get)
+
 def unlessExpert (action : FormatM Unit) : FormatM Unit := do
   unless <- getConfigValue Format.Config.expertMode do
     action
@@ -119,13 +123,10 @@ def splitLines : String -> List String :=
  where
   isNewline : Char -> Bool := (· == '\n')
 
-def writePlain (s : String) : IO Unit := do
-  (<- IO.getStdout).putStr s
-
 def writeChunk (s : String) : FormatM Unit := do
-  let stdout <- IO.getStdout
-  let plainOutput := writePlain s
-  let colorOutput color := IO.bracket_ (stdout.setSGR [color]) (stdout.setSGR [SGR.Reset]) plainOutput
+  let stream <- getStream
+  let plainOutput := stream.putStr s
+  let colorOutput color := IO.bracket_ (stream.setSGR [color]) (stream.setSGR [SGR.Reset]) plainOutput
   match <- gets FormatterState.color? with
   | .some color =>
     let usePlain :=
@@ -144,17 +145,18 @@ def write (s : String) : FormatM Unit :=
 def writeLine (s : String) : FormatM Unit :=
   write s *> write "\n"
 
-def writeTransient (new : String) : FormatM Unit := do
-  if <- getConfigValue Format.Config.reportProgress then
-    withoutLineWrapping $ writePlain new
-    (<- IO.getStdout).flush
-    clearLine
- where
-  withoutLineWrapping {a} : IO a -> IO a :=
+def writeTransient (new : String) (stream? : Option IO.FS.Stream := .none) : FormatM Unit := do
+  let stream <- getStream
+  let withoutLineWrapping {a} : IO a -> IO a :=
     IO.bracket_
-      (writePlain disableLineWrappingCode)
-      (writePlain enableLineWrappingCode)
-  clearLine := writePlain $ "\r" ++ csi [] "K"
+      (stream.putStr disableLineWrappingCode)
+      (stream.putStr enableLineWrappingCode)
+  let clearLine := stream.putStr $ "\r" ++ csi [] "K"
+
+  if <- getConfigValue Format.Config.reportProgress then
+    withoutLineWrapping $ stream.putStr new
+    stream.flush
+    clearLine
 
 def getCPUTime? : FormatM (Option Seconds) := do
   -- let t1 <-

@@ -54,9 +54,30 @@ def getEncoding (_ : Stream) : IO (Option TextEncoding) := do
   -- FIXME:
   pure $ .some TextEncoding.utf8
 
--- def capture [Monad m] [MonadLift IO m] (stream : Stream) (action : m a) : m (String × a) := do
-
 end FS.Stream
+
+abbrev WithStream (m) (α) [Monad m] [MonadFinally m] [MonadLiftT BaseIO m] := IO.FS.Stream -> m α -> m α
+
+def captureB [Monad m] [MonadLift IO m] [MonadFinally m] (withStream : WithStream m a) (action : m a) : m (ByteArray × a) := do
+  let buffer : IO.Ref IO.FS.Stream.Buffer <- IO.mkRef {}
+  let stream := IO.FS.Stream.ofBuffer buffer
+  let result <- withStream stream do
+    try
+      action
+    finally
+      stream.flush
+  let output <- (·.data) <$> buffer.get
+  return (output, result)
+
+def captureB' [Monad m] [MonadLift IO m] [MonadFinally m] (withStream : WithStream m a) (action : m a) : m ByteArray := do
+  (·.fst) <$> captureB withStream action
+
+def capture [Monad m] [MonadLift IO m] [MonadFinally m] (withStream : WithStream m a) (action : m a) : m (String × a) := do
+  let (bytes, result) <- captureB withStream action
+  return (String.fromUTF8! bytes, result)
+
+def capture' [Monad m] [MonadLift IO m] [MonadFinally m] (withStream : WithStream m a) (action : m a) : m String := do
+  (·.fst) <$> capture withStream action
 
 def bracket [Monad m] [MonadFinally m] [MonadLift IO m] (before : m a) (after : a -> m b) (action : a -> m c) : m c := do
   let a <- before
@@ -64,17 +85,6 @@ def bracket [Monad m] [MonadFinally m] [MonadLift IO m] (before : m a) (after : 
     action a
   finally
     after a
-  -- try
-  --   let r <- action a
-  --   let _ <- after a
-  --   return r
-  -- catch
-  -- | e =>
-  --   let _ <- after a
-  --   throw e
-  -- finally
-  --   after
-
 
 def bracket_ [Monad m] [MonadFinally m] [MonadLift IO m] (before : m a) (after : m b) (action: m c) : m c :=
   bracket before (const _ after) (const _ action)

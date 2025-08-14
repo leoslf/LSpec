@@ -1,4 +1,5 @@
 import Std.Sync.SharedMutex
+import Std.Internal.Async.Basic
 
 import Concurrency.MVar
 
@@ -12,6 +13,7 @@ import LSpec.Core.Example
 
 namespace LSpec.Core
 
+open Std.Internal.IO.Async
 open Concurrency (MVar)
 
 open LSpec.Core.Example
@@ -20,6 +22,7 @@ open LSpec.Core.Clock
 namespace Format
 
 structure Item where
+  mk ::
   location? : Option Location
   duration : Seconds
   info : String
@@ -39,6 +42,11 @@ inductive Event where
 | Done (results : List (Path × Item)) : Event
 deriving Repr, BEq, Inhabited, TypeName
 
+def Stream := IO.Ref IO.FS.Stream
+
+instance : Repr Stream where
+  reprPrec _ _ := "<stream>"
+
 structure Config where
   mk ::
   useColor : Bool := false
@@ -56,26 +64,8 @@ structure Config where
   usedSeed : Seed := 0
   expectedTotalCount : Nat := 0
   expertMode : Bool := false
+  stream? : Option Stream := .none
 deriving Repr, Inhabited, TypeName
-
--- instance : Inhabited Config where
---   default := {
---     useColor := false,
---     reportProgress := false,
---     outputUnicode := false,
---     useDiff := false,
---     diffContext := .none,
---     externalDiff := .none,
---     prettyPrint := false,
---     prettyPrintFunction := .none,
---     formatException := IO.Error.formatExceptionWith toString,
---     printTimes := false,
---     htmlOutput := false,
---     printCpuTime := false,
---     usedSeed := 0,
---     expectedTotalCount := 0,
---     expertMode := false,
---   }
 
 inductive Signal where
 | Ok : Signal
@@ -88,7 +78,7 @@ open Format
 
 abbrev Format := Format.Event -> IO Unit
 
-partial def monadic [Monad m] [MonadLift BaseIO m] (run : m Unit -> IO Unit) (format : Format.Event -> m Unit) : BaseIO Format := do
+partial def monadic [Monad m] [MonadLift BaseIO m] [MonadFinally m] (run : m Unit -> IO Unit) (format : Format.Event -> m Unit) : BaseIO Format := do
   let event : MVar Format.Event <- MVar.empty
   let done : MVar Signal <- MVar.empty
 
@@ -120,17 +110,18 @@ partial def monadic [Monad m] [MonadLift BaseIO m] (run : m Unit -> IO Unit) (fo
     | e => do
       signal $ .NotOk e
 
-  let result (event : Event) : IO Unit := do
+  let format : Format := λevent => do
     if <- isRunning worker then
       putEvent event
-      match (<- wait) with
+      match <- wait with
       | .Ok => pure ()
       | .NotOk e => do
         let _ <- IO.wait worker
         throw e
 
-  return result
+  return format
  where
   isRunning {a} (task : Task a) : BaseIO Bool := do
-    (· == .running) <$> IO.getTaskState task
+    let state <- IO.getTaskState task
+    return state == .running
 
