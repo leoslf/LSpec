@@ -10,6 +10,7 @@ lean_lib LSpec
 
 lean_exe "lspec-discover" where
   root := `LSpec.Discover.Main
+  buildType := .debug
   needs := #[LSpec]
 
 require "leanprover-community" / "batteries" @ git "v4.22.0-rc4"
@@ -29,10 +30,11 @@ require "Concurrency" from git
 target TestMain pkg : System.FilePath := do
   -- NOTE: make sure to .gitignore the file
   let output := pkg.dir / "Test" / "Main.lean"
-  liftM do
-    IO.FS.writeFile output =<< IO.Process.run {
+  let _ <- liftM do
+    IO.Process.run {
       cmd := "lake"
-      args := #["exe", "lspec-discover"]
+      args := #["exe", "lspec-discover", "--source", s!"{pkg.dir / "Test"}", "--destination", s!"{output}"]
+      cwd := pkg.dir
       inheritEnv := true
     }
   return pure output
@@ -42,4 +44,7 @@ lean_lib Test
 @[default_target]
 lean_exe lspec_tests where
   root := `Test.Main
+  buildType := .debug
   needs := #[TestMain]
+  supportInterpreter := true
+

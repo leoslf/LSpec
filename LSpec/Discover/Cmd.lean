@@ -1,3 +1,4 @@
+import Lake
 import Cli
 
 import LSpec.Discover.Config
@@ -17,14 +18,21 @@ def parseConfig (parsed : Parsed) : IO DiscoverConfig := do
   pure config
 
 def runDiscoverCmd (p : Parsed) : IO UInt32 := do
-  let source <- IO.FS.realPath $ p.flag! "source" |>.as! System.FilePath
-  let destination? := p.flag? "destination" >>= (·.as? System.FilePath)
-  let current := p.flag? "current" >>= (·.as? System.FilePath) |>.getD (<- IO.appDir)
+  let package <- IO.currentDir
+  dbgTraceM s!"current: {package}"
+  -- initSearchPath (<- findSysroot)
+  let mut source <- IO.FS.realPath (p.flag! "source" |>.as! System.FilePath)
+  dbgTraceM s!"package: {package}, source: {source}"
+  source := Lake.relPathFrom package source
+
+  let destination? := (·.as! System.FilePath) <$> p.flag? "destination"
+  if let .some destination := destination? then
+    IO.FS.createDirAll destination.parent.get!
+
   let config <- parseConfig p
-  let specs <- findSpecs source
   let write : String -> IO Unit :=
     destination?.elim IO.println IO.FS.writeFile
-  write $ mkSpecModule source config specs
+  write $ mkSpecModule config (<- findSpecs source)
   return 0
 
 def discoverCmd : Cmd := `[Cli|
@@ -35,7 +43,6 @@ def discoverCmd : Cmd := `[Cli|
     module : ModuleName; "Module name"
     -- "output" : String;
     source : System.FilePath;        "Source"
-    current : System.FilePath;       "Current"
     destination | LSPEC_DISCOVER_DESTINATION : String;   "Destination path"
 
   ARGS:

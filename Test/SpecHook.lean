@@ -1,6 +1,6 @@
 import LSpec
 
-namespace SpecHook
+namespace Test.SpecHook
 
 open LSpec.Core
 
