@@ -185,7 +185,7 @@ mutual
 
   partial def formatSpecs.fromTree : Spec -> String
   | .Spec name => s!"describe \"{name}\" {name}"
-  | .Module name specs => s!"(describe \"{name}\" $ {formatSpecs.fromForest specs})"
+  | .Module name specs => formatSpecs.fromForest specs
   | .Hook name forest => s!"({name}.hook $ {formatSpecs.fromForest forest})"
 end
 
