@@ -27,8 +27,8 @@ end Example
 
 open Example
 
-class Example (e : Type u) where
-  Arg : Type
+class Example e where
+  Arg : Type arg
   evaluate (example_ : e) (params : Params) (hook : Hook Arg) (progress : ProgressCallback) : ExpectationM Result
 
 namespace Example.Result
