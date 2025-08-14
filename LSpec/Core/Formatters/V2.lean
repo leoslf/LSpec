@@ -205,7 +205,7 @@ def defaultFailedFormatter : FormatM Unit := do
     | .Error info e => do
       info.forM indent
       let formatException <- getConfigValue Format.Config.formatException
-      withFailColor ∘ indent $ "uncaught exception: {e}"
+      withFailColor ∘ indent $ s!"uncaught exception: {e}"
 
     -- FIXME:
     -- unlessExpert $ do
