@@ -63,19 +63,48 @@ def silent : Formatter := {
 }
 
 def checks : Formatter :=
-  -- let formatProgress
-  -- | (current, total) =>
-  --   if total == 0 then
-  --     s!"{current}"
-  --   else
-  --     s!"{current}/{total}"
-  -- let indentationFor nesting := "".pushn ' ' $ nesting.length * 2
-  silent
-  -- {
-  --   silent with
-  --   -- progress := λ(nesting, requirement) progress => do
-  --   --   .writeTransient s!"{indentationFor nesting}{requirement} [{formatProgress progress}]"
-  -- }
+  {
+    silent with
+    progress := λ(nesting, requirement) progress => do
+      writeTransient s!"{indentationFor nesting}{requirement} [{formatProgress progress}]"
+    itemStarted := λ(nesting, requirement) => do
+      writeTransient $ s!"{indentationFor nesting}{requirement} [ ]"
+    itemDone := λ(nesting, requirement) item => do
+      let unicode <- outputUnicode
+      let fallback := λa b => if unicode then a else b
+      writeResult nesting requirement item.duration item.info |>.uncurry $
+        match item.result with
+        | .Success .. => (withSuccessColor, fallback "✔" "v")
+        | .Pending .. => (withPendingColor, fallback "‐" "-")
+        | .Failure .. => (withFailColor, fallback "‐" "-")
+      match item.result with
+      | .Success .. => pass'
+      | .Failure .. => pass'
+      | .Pending _ reason? =>
+        withPendingColor $ indentBy (indentationFor ("" :: nesting)) $ "# PENDING: " ++ reason?.getD "No reason given"
+  }
+ where
+  indentationFor (nesting : List String) := "".intercalate $ List.replicate (nesting.length * 2) " "
+
+  writeResult (nesting : List String) (requirement : String) (duration : Seconds) (info : String) (withColor : FormatM Unit -> FormatM Unit) (symbol : String) : FormatM Unit := do
+    let shouldPrintTimes <- printTimes
+    let dt := duration.toMilliseconds.floor
+    let times :=
+      if not shouldPrintTimes || dt == 0 then
+        ""
+      else
+        s!" ({dt}ms)"
+    write $ indentationFor nesting ++ requirement ++ " ["
+    withColor $ write symbol
+    writeLine $ "]" ++ if shouldPrintTimes then times else ""
+    indentBy (indentationFor ("" :: nesting)) info
+
+  formatProgress
+  | (current, total) =>
+    if total == 0 then
+      s!"{current}"
+    else
+      s!"{current}/{total}"
 
 set_option linter.unusedVariables false
 

@@ -62,4 +62,9 @@ def spec : Spec := do
   --         formatter $ item .Success
   --       output <shouldBe> "."
 
+  -- describe "checks" do
+  --   let formatter := V2.checks
+  --   let config := { defaultConfig with format? := .some formatter.toFormat }
+
+  --   -- it "prints unicode check marks" do
   pure ()

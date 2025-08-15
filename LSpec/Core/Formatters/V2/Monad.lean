@@ -145,7 +145,7 @@ def write (s : String) : FormatM Unit :=
 def writeLine (s : String) : FormatM Unit :=
   write s *> write "\n"
 
-def writeTransient (new : String) (stream? : Option IO.FS.Stream := .none) : FormatM Unit := do
+def writeTransient (new : String) : FormatM Unit := do
   let stream <- getStream
   let withoutLineWrapping {a} : IO a -> IO a :=
     IO.bracket_

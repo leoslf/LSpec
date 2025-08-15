@@ -11,8 +11,11 @@ import LSpec.Core.Expectations.Matcher
 
 namespace LSpec.Core
 
+set_option linter.unusedVariables false
 -- FIXME:
 def location? (offset : Nat := 0) : Option Location := .none
+
+set_option linter.unusedVariables true
 
 def expectationFailure (message : String) (offset : Nat := 0) : Expectation := do
   throw $ Failure.mk .none (location? (offset := offset)) $ .Reason message
