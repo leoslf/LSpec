@@ -131,3 +131,11 @@ def shouldBeOkWith [TypeName ε] [ToString ε] [BEq a] (except : Except ε a) (e
 
 infixl:1 " <shouldBeOkWith> " => shouldBeOkWith
 
+def shouldReturnOkWith [TypeName ε] [ToString ε] [BEq a] (action : IO (Except ε a)) (expected : a) : Expectation := do
+  match <- action with
+  | .error error => expectationFailure s!"unexpected .error {reprStr $ TypeName.typeName ε}"
+  | .ok actual =>
+    actual <shouldBe> expected
+
+infixl:1 " <shouldReturnOkWith> " => shouldReturnOkWith
+
