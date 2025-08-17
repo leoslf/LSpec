@@ -123,17 +123,17 @@ def shouldThrow [TypeName ε] [ToString ε] [Monad m] [MonadExcept ε m] [MonadL
 
 infixl:1 " <shouldThrow> " => shouldThrow
 
-def shouldBeOkWith [TypeName ε] [ToString ε] [BEq a] (except : Except ε a) (expected : a) : Expectation := do
+def shouldBeOkWith [ToString ε] [BEq a] (except : Except ε a) (expected : a) : Expectation := do
   match except with
-  | .error error => expectationFailure s!"unexpected .error {reprStr $ TypeName.typeName ε}"
+  | .error error => expectationFailure s!"unexpected .error {error}"
   | .ok actual =>
     actual <shouldBe> expected
 
 infixl:1 " <shouldBeOkWith> " => shouldBeOkWith
 
-def shouldReturnOkWith [TypeName ε] [ToString ε] [BEq a] (action : IO (Except ε a)) (expected : a) : Expectation := do
+def shouldReturnOkWith [ToString ε] [BEq a] (action : IO (Except ε a)) (expected : a) : Expectation := do
   match <- action with
-  | .error error => expectationFailure s!"unexpected .error {reprStr $ TypeName.typeName ε}"
+  | .error error => expectationFailure s!"unexpected .error {error}"
   | .ok actual =>
     actual <shouldBe> expected
 
