@@ -32,8 +32,12 @@ def shouldBe [BEq a] (actual : a) (expected : a) : Expectation := do
     throw $ Failure.mk .none .none $ .ExpectedButGot .none (reprStr expected) (reprStr actual)
   -- LUnit.assertEqual "" expected actual
 
+infixl:1 " <shouldBe> " => shouldBe
+
 def shouldSatisfy (value : a) (predicate : a -> Bool) : Expectation :=
   expectTrue ("predicate failed on: " ++ reprStr value) $ predicate value
+
+infixl:1 " <shouldSatisfy> " => shouldSatisfy
 
 def compareWith (comparator : a -> a -> Bool) (errorDescription : String) (result : a) (expected : a) : Expectation :=
   expectTrue s!"{reprStr result} {errorDescription} {reprStr expected}" $ comparator expected result
@@ -56,31 +60,49 @@ instance : Sequence String where
 def shouldStartWith [Sequence a] : (actual : a) -> (prefix_ : a) -> Expectation :=
   compareWith Sequence.isPrefixOf "does not start with"
 
+infixl:1 " <shouldStartWith> " => shouldStartWith
+
 def shouldEndWith [Sequence a] : (actual : a) -> (suffix : a) -> Expectation :=
   compareWith Sequence.isSuffixOf "does not end with"
+
+infixl:1 " <shouldEndWith> " => shouldEndWith
 
 def shouldContain [Sequence a] : (actual : a) -> (infix_ : a) -> Expectation :=
   compareWith Sequence.isInfixOf "does not contain"
 
+infixl:1 " <shouldContain> " => shouldContain
+
 def shouldMatchList [BEq a] (xs : List a) (ys : List a) : Expectation := do
   matchList xs ys |>.elim pass' expectationFailure
 
+infixl:1 " <shouldMatchList> " => shouldMatchList
+
 def shouldReturn [BEq a] (action : IO a) (expected : a) : Expectation := do
   let actual <- action
-  shouldBe actual expected
+  actual <shouldBe> expected
+
+infixl:1 " <shouldReturn> " => shouldReturn
 
 def shouldNotBe [BEq a] (actual : a) (notExpected : a) : Expectation :=
   expectTrue ("not expected: " ++ reprStr actual) (actual != notExpected)
 
+infixl:1 " <shouldNotBe> " => shouldNotBe
+
 def shouldNotSatisfy [BEq a] (actual : a) (predicate : a -> Bool) : Expectation :=
   expectTrue ("predicate succeeded on: " ++ reprStr actual) ((not ∘ predicate) actual)
+
+infixl:1 " <shouldNotSatisfy> " => shouldNotSatisfy
 
 def shouldNotContain [Sequence a] : (actual : a) -> (infix_ : a) -> Expectation :=
   compareWith ((not ∘ ·) ∘ Sequence.isInfixOf) "does contain"
 
+infixl:1 " <shouldNotContain> " => shouldNotContain
+
 def shouldNotReturn [BEq a] (action : IO a) (notExpected : a) : Expectation := do
   let actual <- action
   shouldNotBe actual notExpected
+
+infixl:1 " <shouldNotReturn> " => shouldNotReturn
 
 def shouldThrow [TypeName ε] [ToString ε] [Monad m] [MonadExcept ε m] [MonadLift m ExpectationM] (action : m a) (predicate : ε -> Bool) : Expectation := do
   match <- liftM $ toExcept action with
@@ -99,16 +121,13 @@ def shouldThrow [TypeName ε] [ToString ε] [Monad m] [MonadExcept ε m] [MonadL
   exceptionType : String :=
     reprStr $ TypeName.typeName ε
 
-infixl:1 " <shouldBe> " => shouldBe
-infixl:1 " <shouldSatisfy> " => shouldSatisfy
 infixl:1 " <shouldThrow> " => shouldThrow
-infixl:1 " <shouldStartWith> " => shouldStartWith
-infixl:1 " <shouldEndWith> " => shouldEndWith
-infixl:1 " <shouldContain> " => shouldContain
-infixl:1 " <shouldMatchList> " => shouldMatchList
-infixl:1 " <shouldReturn> " => shouldReturn
-infixl:1 " <shouldNotBe> " => shouldNotBe
-infixl:1 " <shouldNotSatisfy> " => shouldNotSatisfy
-infixl:1 " <shouldNotContain> " => shouldNotContain
-infixl:1 " <shouldNotReturn> " => shouldNotReturn
+
+def shouldBeOkWith [TypeName ε] [ToString ε] [BEq a] (except : Except ε a) (expected : a) : Expectation := do
+  match except with
+  | .error error => expectationFailure s!"unexpected .error {reprStr $ TypeName.typeName ε}"
+  | .ok actual =>
+    actual <shouldBe> expected
+
+infixl:1 " <shouldBeOkWith> " => shouldBeOkWith
 
