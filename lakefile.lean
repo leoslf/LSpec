@@ -13,7 +13,7 @@ lean_exe "lspec-discover" where
   buildType := .debug
   needs := #[LSpec]
 
-require "leanprover-community" / "batteries" @ git "v4.22.0-rc4"
+require "leanprover-community" / "batteries" @ git "v4.23.0-rc2"
 
 require "Cli" from git
   "https://github.com/leoslf/lean4-cli" @ "main"

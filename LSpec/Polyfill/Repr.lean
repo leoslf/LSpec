@@ -2,16 +2,24 @@ universe u v
 
 variable {m : Type u -> Type v} [Monad m]
 
--- instance (priority := low) {a : Type u} : Repr (m a) where
---   reprPrec _ _ := "M (a)"
+set_option diagnostics true
 
-deriving instance TypeName for Unit, Nat, Int, UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32, Int64, Bool, Float32, Float, String, IO.Error
+deriving instance TypeName for Nat, Int, UInt8, UInt16, UInt32, UInt64, Int8, Int16, Int32, Int64, Bool, Float32, Float, String, IO.Error
 
 def parenthesize (type : String) : String :=
   if type.contains ' ' then
     s!"({type})"
   else
     type
+
+section PUnit
+unsafe def instTypeNamePUnitImpl : TypeName PUnit := .mk _ $ Lean.Name.mkSimple s!"PUnit"
+@[implemented_by instTypeNamePUnitImpl] opaque instTypeNamePUnit : TypeName PUnit
+instance : TypeName PUnit  := instTypeNamePUnit
+end PUnit
+
+#synth TypeName PUnit
+#synth TypeName Unit
 
 section IO
 unsafe def instTypeNameIOImpl [TypeName a] : TypeName (IO a) := .mk _ $ Lean.Name.mkSimple s!"IO {parenthesize $ reprStr $ TypeName.typeName a}"
@@ -36,6 +44,12 @@ unsafe def instTypeNameProdImpl [TypeName a] [TypeName b] : TypeName (Prod a b) 
 @[implemented_by instTypeNameProdImpl] opaque instTypeNameProd [TypeName a] [TypeName b] : TypeName (Prod a b)
 instance [TypeName a] [TypeName b] : TypeName (Prod a b)  := instTypeNameProd
 end Prod
+
+section List
+unsafe def instTypeNameListImpl [TypeName a] : TypeName (List a) := .mk _ $ Lean.Name.mkSimple s!"List {parenthesize $ reprStr $ TypeName.typeName a}"
+@[implemented_by instTypeNameListImpl] opaque instTypeNameList [TypeName a] : TypeName (List a)
+instance [TypeName a] : TypeName (List a)  := instTypeNameList
+end List
 
 section Function
 unsafe def instTypeNameFunctionImpl [TypeName a] [TypeName b] : TypeName (a -> b) := .mk _ $ Lean.Name.mkSimple s!"{parenthesize $ reprStr $ TypeName.typeName a} → {parenthesize $ reprStr $ TypeName.typeName b}"

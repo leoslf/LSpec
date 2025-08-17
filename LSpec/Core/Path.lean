@@ -1,4 +1,5 @@
 import Batteries.Data.String.Matcher
+import LSpec.Prelude
 
 namespace LSpec.Core
 
